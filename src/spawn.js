@@ -1,3 +1,5 @@
+var utils = require('utils');
+
 module.exports = {
     run: function (spawn) {
         var room = spawn.room;

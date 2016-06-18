@@ -11,14 +11,12 @@ global.ROLE_SOLDIER_MELEE = 'soldierMelee';
 global.ROLE_SOLDIER_MEDIC = 'soldierMedic';
 
 global.Roles = {
-    harvester: require('roles/harvester'),
-    soldierMelee: require('roles/soldier.melee'),
-    soldierMedic: require('roles/soldier.medic')
+    harvester: require('harvester'),
+    soldierMelee: require('soldier_melee'),
+    soldierMedic: require('soldier_medic')
 };
 
-var utils = require('utils');
 var spawn = require('spawn');
-
 
 module.exports.loop = function () {
 
