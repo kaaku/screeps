@@ -20,13 +20,14 @@ var spawn = require('spawn');
 
 module.exports.loop = function () {
 
-    Game.spawns.forEach(function (element) {
-        spawn.run(element);
-    });
+    for (var spawnName in Game.spawns) {
+        spawn.run(Game.spawns[spawnName]);
+    }
 
-    Game.creeps.forEach(function (creep) {
+    for (var creepName in Game.creeps) {
+        var creep = Game.creeps[creepName];
         if (!creep.spawning) {
             Roles[creep.memory.role].run(creep);
         }
-    });
+    }
 };
