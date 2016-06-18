@@ -1,0 +1,26 @@
+{
+  "name": "screeps",
+  "version": "1.0.0",
+  "description": "AI for Screeps",
+  "main": "Gruntfile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaaku/screeps.git"
+  },
+  "keywords": [
+    "screeps"
+  ],
+  "author": "Markus Yrjola",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kaaku/screeps/issues"
+  },
+  "homepage": "https://github.com/kaaku/screeps#readme",
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-screeps": "^1.2.1"
+  }
+}
