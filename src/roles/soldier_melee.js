@@ -1,5 +1,8 @@
 module.exports = {
 
+    /**
+     * @param {Creep} creep
+     */
     run: function (creep) {
         if (creep.getActiveBodyparts(ATTACK) === 0) {
             creep.log('Weapons broken!');
@@ -10,7 +13,7 @@ module.exports = {
                 creep.log('Running to closest medic');
                 creep.moveTo(closestMedic);
             } else {
-                creep.log('Running to closest spawn')
+                creep.log('Running to closest spawn');
                 creep.moveTo(creep.pos.findClosestByPath(FIND_MY_SPAWNS));
             }
         } else {

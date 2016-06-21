@@ -7,27 +7,32 @@ Creep.prototype.log = function (message) {
 };
 
 global.ROLE_HARVESTER = 'harvester';
+global.ROLE_MINER = 'miner';
+global.ROLE_CARRIER = 'carrier';
 global.ROLE_SOLDIER_MELEE = 'soldierMelee';
 global.ROLE_SOLDIER_MEDIC = 'soldierMedic';
 
 global.Roles = {
     harvester: require('harvester'),
+    miner: require('miner'),
+    carrier: require('carrier'),
     soldierMelee: require('soldier_melee'),
     soldierMedic: require('soldier_medic')
 };
 
-var spawn = require('spawn');
+var _ = require('lodash');
+var spawnController = require('./spawn');
 
 module.exports.loop = function () {
 
-    for (var spawnName in Game.spawns) {
-        spawn.run(Game.spawns[spawnName]);
-    }
+    _.forEach(Game.spawns, function (spawnName) {
+        spawnController.run(Game.spawns[spawnName]);
+    });
 
-    for (var creepName in Game.creeps) {
+    _.forEach(Game.creeps, function (creepName) {
         var creep = Game.creeps[creepName];
         if (!creep.spawning) {
             Roles[creep.memory.role].run(creep);
         }
-    }
+    });
 };
