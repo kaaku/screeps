@@ -13,11 +13,11 @@ global.ROLE_SOLDIER_MELEE = 'soldierMelee';
 global.ROLE_SOLDIER_MEDIC = 'soldierMedic';
 
 global.Roles = {
-    harvester: require('harvester'),
-    miner: require('miner'),
-    carrier: require('carrier'),
-    soldierMelee: require('soldier_melee'),
-    soldierMedic: require('soldier_medic')
+    harvester: require('./role.harvester'),
+    miner: require('./role.miner'),
+    carrier: require('./role.carrier'),
+    soldierMelee: require('./role.soldier_melee'),
+    soldierMedic: require('./role.soldier_medic')
 };
 
 var _ = require('lodash');
