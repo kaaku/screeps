@@ -53,10 +53,14 @@ module.exports = {
         while (energy >= cheapestPart) {
             if (!move.length) {
                 energy = this.addPart(energy, move, MOVE);
-            } else if (energy >= BODYPART_COST[WORK] && work.length <= 3 * carry.length) {
+            } else if (energy >= BODYPART_COST[WORK] && work.length <= 5 && work.length <= 3 * carry.length) {
+                // 5 WORK parts is enough to deplete an energy source
                 energy = this.addPart(energy, work, WORK);
-            } else if (energy >= BODYPART_COST[CARRY]) {
+            } else if (energy >= BODYPART_COST[CARRY] && carry.length <= 2) {
+                // No need to add more than 2 CARRY parts; these are only needed when there's no carrier available
                 energy = this.addPart(energy, carry, CARRY);
+            } else {
+                break;
             }
         }
 
