@@ -22,10 +22,14 @@ Creep.prototype.requestEnergyFrom = function (target) {
     var miners = this.room.find(FIND_MY_CREEPS, {
         filter: creep => creep.memory.role === ROLE_MINER
     });
-    var lowestMinerTickCount = _.min(_.map(miners, 'ticksToLive'));
-    var energyInTarget = target.energy || target.store[RESOURCE_ENERGY];
+    var carriers = this.room.find(FIND_MY_CREEPS, {
+        filter: creep => creep.memory.role === ROLE_CARRIER
+    });
+    var lowestCreepTickCount = _.min(_.map(miners, 'ticksToLive').concat(_.min(carriers, 'ticksToLive')));
+    var energyInTarget = _.isNumber(target.energy) ? target.energy :
+            target.store && _.isNumber(target.store[RESOURCE_ENERGY]) ? target.store[RESOURCE_ENERGY] : 0;
 
-    if (energyInTarget > 0 && miners.length >= energySourceCount && lowestMinerTickCount > 50) {
+    if (energyInTarget > 0 && miners.length >= energySourceCount && lowestCreepTickCount > 50) {
         if (typeof target.transfer === 'function') {
             return target.transfer(this, RESOURCE_ENERGY);
         } else if (typeof target.transferEnergy === 'function') {
