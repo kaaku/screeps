@@ -50,7 +50,7 @@ module.exports = {
 
         while (energy >= cheapestPart) {
             if (energy >= BODYPART_COST[MOVE] &&
-                    (!move.length || move.length < carry.length * 3 || energy < BODYPART_COST[CARRY])) {
+                    (!move.length || move.length * 2 < carry.length || energy < BODYPART_COST[CARRY])) {
                 energy = this.addPart(energy, move, MOVE);
             } else if (energy >= BODYPART_COST[CARRY]) {
                 energy = this.addPart(energy, carry, CARRY);
