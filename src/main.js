@@ -5,6 +5,38 @@ Creep.prototype.canHeal = function () {
 Creep.prototype.log = function (message) {
     console.log(`${this.name} (${this.memory.role}): ${message}`);
 };
+/**
+ * Make the creep request for energy from the given spawn or extension.
+ * If the room has very scarce energy reserves at the moment, and the
+ * energy has to be used to build new creeps, no energy will be given
+ * to the creep. Otherwise the maximum amount will be transferred.
+ *
+ * @type {function}
+ *
+ * @param {StructureSpawn|StructureExtension|StructureStorage|StructureContainer} [target] The structure to request energy from
+ *
+ * @return {number|OK|ERR_NOT_OWNER|ERR_NOT_ENOUGH_RESOURCES|ERR_INVALID_TARGET|ERR_FULL|ERR_NOT_IN_RANGE|ERR_INVALID_ARGS}
+ */
+Creep.prototype.requestEnergyFrom = function (target) {
+    var energySourceCount = this.room.find(FIND_SOURCES).length;
+    var miners = this.room.find(FIND_MY_CREEPS, {
+        filter: creep => creep.memory.role === ROLE_MINER
+    });
+    var lowestMinerTickCount = _.min(_.map(miners, 'ticksToLive'));
+    var energyInTarget = target.energy || target.store[RESOURCE_ENERGY];
+
+    if (energyInTarget > 0 && miners.length >= energySourceCount && lowestMinerTickCount > 50) {
+        if (typeof target.transfer === 'function') {
+            return target.transfer(this, RESOURCE_ENERGY);
+        } else if (typeof target.transferEnergy === 'function') {
+            return target.transferEnergy(this);
+        } else {
+            return ERR_INVALID_TARGET;
+        }
+    }
+
+    return ERR_NOT_ENOUGH_ENERGY;
+};
 
 global.ROLE_HARVESTER = 'harvester';
 global.ROLE_MINER = 'miner';

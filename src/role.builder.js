@@ -63,11 +63,7 @@ module.exports = {
                 if (!creep.pos.isNearTo(pickupTarget)) {
                     creep.moveTo(pickupTarget);
                 } else {
-                    if (pickupTarget.transfer) {
-                        pickupTarget.transfer(creep, RESOURCE_ENERGY);
-                    } else {
-                        pickupTarget.transferEnergy(creep);
-                    }
+                    creep.requestEnergyFrom(pickupTarget);
                 }
             }
         }
