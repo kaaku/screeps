@@ -11,11 +11,9 @@ module.exports = {
 
         if (room.energyAvailable === room.energyCapacityAvailable) {
 
-            // TODO: Way too many soldiers! Create builders instead.
             var minerCount = utils.countCreeps(room, ROLE_MINER),
                     carrierCount = utils.countCreeps(room, ROLE_CARRIER),
-                soldierMeleeCount = utils.countCreeps(room, ROLE_SOLDIER_MELEE),
-                    medicCount = utils.countCreeps(room, ROLE_SOLDIER_MEDIC),
+                    builderCount = utils.countCreeps(room, ROLE_BUILDER),
                     freeSource = this.findClosestFreeEnergySource(spawn);
 
             if (carrierCount < minerCount) {
@@ -27,10 +25,8 @@ module.exports = {
                 }
             } else if (freeSource) {
                 this.build(spawn, ROLE_MINER, {sourceId: freeSource.id});
-            } else if (soldierMeleeCount > 0 && medicCount === 0) {
-                this.build(spawn, ROLE_SOLDIER_MEDIC);
-            } else {
-                this.build(spawn, ROLE_SOLDIER_MELEE);
+            } else if (builderCount < 3) {
+                this.build(spawn, ROLE_BUILDER);
             }
         }
     },
