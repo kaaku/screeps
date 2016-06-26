@@ -5,9 +5,17 @@ module.exports = {
 
     run: function (carrier) {
 
-        this.pickupEnergyInRange(carrier);
+        carrier.pickupEnergyInRange();
 
-        if (_.sum(carrier.carry) > 0.9 * carrier.carryCapacity) {
+        if (_.sum(carrier.carry) === carrier.carryCapacity || carrier.ticksToLive < 50) {
+            carrier.memory.inDeliveryMode = true;
+        } else if (_.sum(carrier.carry) === 0) {
+            carrier.memory.inDeliveryMode = false;
+        }
+
+        this.transferEnergyToAdjacentBuilders(carrier);
+
+        if (carrier.memory.inDeliveryMode) {
             var dropOff = utils.findClosestEnergyDropOff(carrier.pos);
             if (dropOff) {
                 if (!carrier.pos.isNearTo(dropOff)) {
@@ -37,7 +45,7 @@ module.exports = {
         }
 
         // In case we moved. Energy pickups are free!
-        this.pickupEnergyInRange(carrier);
+        carrier.pickupEnergyInRange();
     },
 
     getBody: function (energy) {
@@ -61,6 +69,20 @@ module.exports = {
         }
 
         return carry.concat(move);
+    },
+
+    transferEnergyToAdjacentBuilders: function (carrier) {
+        if (carrier.carry.energy > 0) {
+            var adjacentNonFullBuilders = carrier.pos.findInRange(FIND_MY_CREEPS, 1, {
+                filter: creep => creep.memory.role === ROLE_BUILDER && creep.carry.energy < creep.carryCapacity
+            });
+            _.forEach(adjacentNonFullBuilders, function (builder) {
+                if (carrier.carry.energy > 0) {
+                    carrier.transfer(builder, RESOURCE_ENERGY);
+                }
+            })
+        }
+
     },
 
     getMiner: function (carrier) {
@@ -106,14 +128,6 @@ module.exports = {
             carrier.memory.sourceId = miner.memory.sourceId;
 
             return miner;
-        }
-    },
-
-    pickupEnergyInRange: function (carrier) {
-        if (carrier.carry.energy < carrier.carryCapacity) {
-            _.forEach(carrier.pos.findInRange(FIND_DROPPED_ENERGY, 1), function (resource) {
-                carrier.pickup(resource);
-            });
         }
     },
 

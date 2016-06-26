@@ -18,6 +18,11 @@ Creep.prototype.log = function (message) {
  * @return {number|OK|ERR_NOT_OWNER|ERR_NOT_ENOUGH_RESOURCES|ERR_INVALID_TARGET|ERR_FULL|ERR_NOT_IN_RANGE|ERR_INVALID_ARGS}
  */
 Creep.prototype.requestEnergyFrom = function (target) {
+    if (this.room.find(FIND_HOSTILE_CREEPS).length > 0) {
+        // Busy building fighting creeps!  :)
+        return ERR_BUSY;
+    }
+
     var energySourceCount = this.room.find(FIND_SOURCES).length;
     var miners = this.room.find(FIND_MY_CREEPS, {
         filter: creep => creep.memory.role === ROLE_MINER
@@ -29,7 +34,8 @@ Creep.prototype.requestEnergyFrom = function (target) {
     var energyInTarget = _.isNumber(target.energy) ? target.energy :
             target.store && _.isNumber(target.store[RESOURCE_ENERGY]) ? target.store[RESOURCE_ENERGY] : 0;
 
-    if (energyInTarget > 0 && miners.length >= energySourceCount && lowestCreepTickCount > 50) {
+    if (energyInTarget > 0 && miners.length >= energySourceCount && carriers.length >= miners.length &&
+            lowestCreepTickCount > 50) {
         if (typeof target.transfer === 'function') {
             return target.transfer(this, RESOURCE_ENERGY);
         } else if (typeof target.transferEnergy === 'function') {
@@ -41,6 +47,20 @@ Creep.prototype.requestEnergyFrom = function (target) {
 
     return ERR_NOT_ENOUGH_ENERGY;
 };
+/**
+ * Makes the creep pick up all energy in the adjacent squares.
+ *
+ * @type {function}
+ */
+Creep.prototype.pickupEnergyInRange = function () {
+    if (this.carry.energy < this.carryCapacity) {
+        var self = this;
+        _.forEach(this.pos.findInRange(FIND_DROPPED_ENERGY, 1), function (resource) {
+            self.pickup(resource);
+        });
+    }
+};
+
 
 global.ROLE_HARVESTER = 'harvester';
 global.ROLE_MINER = 'miner';
