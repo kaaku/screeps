@@ -21,7 +21,7 @@ module.exports = {
                 creep.moveTo(weakest);
             }
         } else {
-            var spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS);
+            var spawn = creep.pos.findClosestByRange(FIND_MY_SPAWNS);
             if (spawn && creep.pos.getRangeTo(spawn) > 3) {
                 creep.moveTo(spawn);
             }

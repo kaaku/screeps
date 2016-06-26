@@ -6,7 +6,7 @@ module.exports = {
     run: function (creep) {
         if (creep.getActiveBodyparts(ATTACK) === 0) {
             creep.log('Weapons broken!');
-            var closestMedic = creep.pos.findClosestByPath(FIND_MY_CREEPS, {
+            var closestMedic = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
                 filter: (creep) => creep.canHeal()
             });
             if (closestMedic) {
@@ -14,16 +14,16 @@ module.exports = {
                 creep.moveTo(closestMedic);
             } else {
                 creep.log('Running to closest spawn');
-                creep.moveTo(creep.pos.findClosestByPath(FIND_MY_SPAWNS));
+                creep.moveTo(creep.pos.findClosestByRange(FIND_MY_SPAWNS));
             }
         } else {
-            var hostile = creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
+            var hostile = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
             if (hostile && creep.pos.getRangeTo(hostile) < 10) {
                 if (creep.attack(hostile) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(hostile);
                 }
             } else {
-                var spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS);
+                var spawn = creep.pos.findClosestByRange(FIND_MY_SPAWNS);
                 if (spawn && creep.pos.getRangeTo(spawn) > 5) {
                     creep.moveTo(spawn);
                 }

@@ -44,7 +44,7 @@ module.exports = {
                 }
             } else {
                 // No miners in the room, check for energy piles
-                var energy = carrier.pos.findClosestByPath(FIND_DROPPED_ENERGY);
+                var energy = carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY);
                 if (energy && !carrier.pos.isNearTo(energy) && !carrier.fatigue) {
                     carrier.moveTo(energy);
                 }

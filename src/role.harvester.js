@@ -3,12 +3,12 @@ module.exports = {
     /** @param {Creep} creep **/
     run: function (creep) {
         if (creep.carry.energy < creep.carryCapacity) {
-            var source = creep.pos.findClosestByPath(FIND_SOURCES);
+            var source = creep.pos.findClosestByRange(FIND_SOURCES);
             if (source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(source);
             }
         } else {
-            var target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+            var target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
                 filter: structure => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||

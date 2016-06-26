@@ -18,15 +18,12 @@ module.exports = {
 
             var site = Game.getObjectById(builder.memory.constructionSiteId);
             if (!site) {
-                // No construction site in memory; find the site that's closest to completion
-                var sites = _.sortBy(builder.room.find(FIND_MY_CONSTRUCTION_SITES),
-                        site => site.progress / site.progressTotal, 'desc');
-                if (sites.length) {
-                    site = sites[0];
-                    builder.memory.constructionSiteId = site.id;
-                } else {
-                    builder.memory.constructionSiteId = null;
-                }
+                // No construction site in memory; find the closest started one,
+                // or if none are started, just the closest one
+                site = builder.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
+                            filter: site => site.progress > 0
+                        }) || builder.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
+                builder.memory.constructionSiteId = site ? site.id : null;
             }
 
             if (site) {

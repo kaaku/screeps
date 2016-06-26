@@ -25,7 +25,7 @@ module.exports = {
      * structure was found
      */
     findClosestEnergyDropOff: function (position) {
-        return position.findClosestByPath(FIND_MY_STRUCTURES, {
+        return position.findClosestByRange(FIND_MY_STRUCTURES, {
             filter: structure => {
                 return ((structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||

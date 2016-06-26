@@ -51,7 +51,7 @@ module.exports = {
             filter: creep => creep.memory.role === ROLE_MINER
         }), 'memory.sourceId');
 
-        return spawn.pos.findClosestByPath(FIND_SOURCES_ACTIVE, {
+        return spawn.pos.findClosestByRange(FIND_SOURCES_ACTIVE, {
             filter: source => _.indexOf(reservedSourceIds, source.id) < 0
         });
     }

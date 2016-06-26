@@ -74,7 +74,7 @@ module.exports = {
      * @param {Creep} miner
      */
     getCarrier: function (miner) {
-        return miner.pos.findClosestByPath(FIND_MY_CREEPS, {
+        return miner.pos.findClosestByRange(FIND_MY_CREEPS, {
             filter: creep => creep.memory.role === ROLE_CARRIER && creep.memory.sourceId === miner.memory.sourceId
         });
     },
