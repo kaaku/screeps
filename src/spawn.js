@@ -20,9 +20,7 @@ module.exports = {
             if (room.find(FIND_HOSTILE_CREEPS).length > 0) {
                 this.build(spawn, ROLE_SOLDIER_MELEE);
             } else if (carrierCount < minerCount) {
-                var soloMiner = spawn.pos.findClosestByPath(FIND_MY_CREEPS, {
-                    filter: creep => creep.memory.role === ROLE_MINER && !Game.getObjectById(creep.memory.carrierId)
-                });
+                var soloMiner = utils.findClosestSoloMiner(spawn.pos);
                 if (soloMiner) {
                     this.build(spawn, ROLE_CARRIER, {minerId: soloMiner.id, sourceId: soloMiner.memory.sourceId});
                 }

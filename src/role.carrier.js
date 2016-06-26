@@ -93,47 +93,46 @@ module.exports = {
     },
 
     getMiner: function (carrier) {
+
         var miner = Game.getObjectById(carrier.memory.minerId);
 
-        if (miner) {
-            if (!miner.memory.carrierId) {
-                miner.memory.carrierId = carrier.id;
-            }
-            return miner;
-        } else {
-            // Miner not found, maybe destroyed in a fight, or broke down due to aging.
+        if (!carrier.memory.hasOwnMiner || !miner) {
+            // Either working temporarily with a surrogate miner, or the miner
+            // we just worked with died. Find a new one.
 
+            var soloMiner = utils.findClosestSoloMiner(carrier.pos);
+            if (soloMiner) {
+                carrier.memory.minerId = soloMiner.id;
+                carrier.memory.sourceId = soloMiner.memory.sourceId;
+                carrier.memory.hasOwnMiner = true;
+                soloMiner.memory.carrierId = carrier.id;
+                return soloMiner;
+            }
+
+            // Find a surrogate miner and temporarily link to that,
+            // until a new miner is built for the current source
             var miners = carrier.room.find(FIND_MY_CREEPS, {
-                filter: creep => creep.memory.role == ROLE_MINER
+                filter: creep => creep.memory.role === ROLE_MINER
             });
-
-            if (!miners.length) {
-                // No miners available, just wait until some are made
-                carrier.memory.minerId = null;
-                carrier.memory.sourceId = null;
-                return null;
+            // Work with the farthest off miner, as it probably needs the most help
+            var farthestMiner = _.tail(_.sortBy(miners, function (miner) {
+                return carrier.pos.getRangeTo(miner);
+            }));
+            if (farthestMiner) {
+                carrier.memory.minerId = farthestMiner.id;
+                carrier.memory.sourceId = farthestMiner.memory.sourceId;
+                carrier.memory.hasOwnMiner = false;
+                return farthestMiner;
             }
 
-            _.forEach(miners, function (creep) {
-                if (!Game.getObjectById(creep.memory.carrierId)) {
-                    miner = creep;
-                    return false;
-                }
-            });
-
-            if (miner) {
-                carrier.memory.minerId = miner.id;
-                carrier.memory.sourceId = miner.memory.sourceId;
+            // No miners in the room, just chill
+            return null;
+        } else {
+            // The carrier is linked to an existing miner
+            if (!miner.memory.carrierId) {
+                // Make sure the miner is aware of the linkage as well
                 miner.memory.carrierId = carrier.id;
-                return miner;
             }
-
-            // Link to an existing miner
-            miner = carrier.pos.findClosestByPath(miners);
-            // Don't override the carrier reference in the miner, as the current one is still valid
-            carrier.memory.minerId = miner.id;
-            carrier.memory.sourceId = miner.memory.sourceId;
-
             return miner;
         }
     },
