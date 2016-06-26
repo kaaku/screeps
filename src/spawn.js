@@ -17,7 +17,9 @@ module.exports = {
                     builderCount = utils.countCreeps(room, ROLE_BUILDER),
                     freeSource = this.findClosestFreeEnergySource(spawn);
 
-            if (carrierCount < minerCount) {
+            if (room.find(FIND_HOSTILE_CREEPS).length > 0) {
+                this.build(spawn, ROLE_SOLDIER_MELEE);
+            } else if (carrierCount < minerCount) {
                 var soloMiner = spawn.pos.findClosestByPath(FIND_MY_CREEPS, {
                     filter: creep => creep.memory.role === ROLE_MINER && !Game.getObjectById(creep.memory.carrierId)
                 });
@@ -28,6 +30,8 @@ module.exports = {
                 this.build(spawn, ROLE_MINER, {sourceId: freeSource.id});
             } else if (builderCount < 3) {
                 this.build(spawn, ROLE_BUILDER);
+            } else if (utils.countCreeps(room, ROLE_SOLDIER_MELEE) < 3) {
+                this.build(spawn, ROLE_SOLDIER_MELEE);
             }
         }
     },
