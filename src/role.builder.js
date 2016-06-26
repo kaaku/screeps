@@ -2,51 +2,64 @@ var _ = require('lodash');
 
 module.exports = {
 
-    /** @param {Creep} creep **/
-    run: function (creep) {
+    /** @param {Creep} builder **/
+    run: function (builder) {
 
-        if (creep.memory.building && creep.carry.energy === 0) {
-            creep.memory.building = false;
-        } else if (!creep.memory.building && creep.carry.energy === creep.carryCapacity) {
-            creep.memory.building = true;
+        builder.pickupEnergyInRange();
+
+        if (builder.memory.building && builder.carry.energy === 0) {
+            builder.memory.building = false;
+        } else if (!builder.memory.building && builder.carry.energy === builder.carryCapacity) {
+            builder.memory.building = true;
         }
 
-        if (creep.memory.building) {
+        if (builder.memory.building) {
             // Building mode on; build something or upgrade the controller
 
-            var site = Game.getObjectById(creep.memory.constructionSiteId);
+            var site = Game.getObjectById(builder.memory.constructionSiteId);
             if (!site) {
                 // No construction site in memory; find the site that's closest to completion
-                var sites = _.sortBy(creep.room.find(FIND_MY_CONSTRUCTION_SITES),
+                var sites = _.sortBy(builder.room.find(FIND_MY_CONSTRUCTION_SITES),
                         site => site.progress / site.progressTotal, 'desc');
                 if (sites.length) {
                     site = sites[0];
-                    creep.memory.constructionSiteId = site.id;
+                    builder.memory.constructionSiteId = site.id;
                 } else {
-                    creep.memory.constructionSiteId = null;
+                    builder.memory.constructionSiteId = null;
                 }
             }
 
             if (site) {
-                if (!creep.pos.inRangeTo(site, 3)) {
-                    creep.moveTo(site);
+                if (!builder.pos.inRangeTo(site, 3)) {
+                    builder.moveTo(site);
                 } else {
-                    creep.build(site);
+                    builder.build(site);
+                }
+
+                return;
+            }
+
+            var repairTarget = this.findRepairTarget(builder);
+            if (repairTarget) {
+                if (!builder.pos.inRangeTo(repairTarget, 3)) {
+                    builder.moveTo(repairTarget);
+                } else {
+                    builder.repair(repairTarget);
                 }
             } else {
-                var controller = creep.room.controller;
-                if (!creep.pos.inRangeTo(controller, 3)) {
-                    creep.moveTo(controller);
+                var controller = builder.room.controller;
+                if (!builder.pos.inRangeTo(controller, 3)) {
+                    builder.moveTo(controller);
                 } else {
-                    creep.upgradeController(controller);
+                    builder.upgradeController(controller);
                 }
             }
         } else {
             // Energy pickup mode
 
             // TODO: The pickup target ID should probably be cached
-            var energyDeficit = creep.carryCapacity - _.sum(creep.carry);
-            var pickupTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+            var energyDeficit = builder.carryCapacity - _.sum(builder.carry);
+            var pickupTarget = builder.pos.findClosestByRange(FIND_MY_STRUCTURES, {
                 filter: structure => {
                     return ((structure.structureType === STRUCTURE_EXTENSION ||
                             structure.structureType === STRUCTURE_SPAWN) &&
@@ -60,13 +73,36 @@ module.exports = {
             });
 
             if (pickupTarget) {
-                if (!creep.pos.isNearTo(pickupTarget)) {
-                    creep.moveTo(pickupTarget);
+                if (!builder.pos.isNearTo(pickupTarget)) {
+                    builder.moveTo(pickupTarget);
                 } else {
-                    creep.requestEnergyFrom(pickupTarget);
+                    builder.requestEnergyFrom(pickupTarget);
                 }
             }
         }
+
+        builder.pickupEnergyInRange();
+    },
+
+    findRepairTarget: function (builder) {
+        var closestWeakOwnedStructure = builder.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+            filter: structure => structure.hits / structure.hitsMax < 0.5
+        });
+        if (closestWeakOwnedStructure) {
+            return closestWeakOwnedStructure;
+        }
+
+        var closestWeakNeutralStructure = builder.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: structure => {
+                return _.includes([STRUCTURE_WALL, STRUCTURE_ROAD, STRUCTURE_CONTAINER], structure.structureType) &&
+                        structure.hits / structure.hitsMax < 0.5
+            }
+        });
+        if (closestWeakNeutralStructure) {
+            return closestWeakNeutralStructure;
+        }
+
+        return null;
     },
 
     getBody: function (energy) {
