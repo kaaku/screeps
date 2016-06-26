@@ -34,6 +34,13 @@ module.exports = {
                     // and transfer its energy on its own. If the miner has dropped energy
                     // on the ground, that will get picked up by pickupEnergyInRange()
                     carrier.moveTo(miner);
+                } else {
+                    // Pick up energy from the container under the miner
+                    var container = _.head(_.filter(miner.pos.lookFor(LOOK_STRUCTURES),
+                            {'structureType': STRUCTURE_CONTAINER}));
+                    if (container && container.store[RESOURCE_ENERGY] > 0) {
+                        container.transfer(carrier, RESOURCE_ENERGY);
+                    }
                 }
             } else {
                 // No miners in the room, check for energy piles
