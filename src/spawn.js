@@ -9,15 +9,16 @@ module.exports = {
     run: function (spawn) {
         var room = spawn.room;
 
-        if (!spawn.spawning && (room.energyAvailable === room.energyCapacityAvailable ||
-                (utils.countCreeps(room, ROLE_MINER) === 0 && room.energyAvailable >= SPAWN_ENERGY_CAPACITY))) {
+        var minerCount = utils.countCreeps(room, ROLE_MINER),
+                carrierCount = utils.countCreeps(room, ROLE_CARRIER);
 
-            var minerCount = utils.countCreeps(room, ROLE_MINER),
-                    carrierCount = utils.countCreeps(room, ROLE_CARRIER),
-                    builderCount = utils.countCreeps(room, ROLE_BUILDER),
+        if (!spawn.spawning && (room.energyAvailable === room.energyCapacityAvailable ||
+                ((minerCount === 0 || carrierCount === 0) && room.energyAvailable >= SPAWN_ENERGY_CAPACITY))) {
+
+            var builderCount = utils.countCreeps(room, ROLE_BUILDER),
                     freeSource = this.findClosestFreeEnergySource(spawn);
 
-            if (room.find(FIND_HOSTILE_CREEPS).length > 0) {
+            if (minerCount > 0 && carrierCount > 0 && room.find(FIND_HOSTILE_CREEPS).length > 0) {
                 this.build(spawn, ROLE_SOLDIER_MELEE);
             } else if (carrierCount < minerCount) {
                 var soloMiner = utils.findClosestSoloMiner(spawn.pos);
@@ -31,6 +32,17 @@ module.exports = {
                 this.build(spawn, ROLE_BUILDER);
             } else if (utils.countCreeps(room, ROLE_SOLDIER_MELEE) < 3) {
                 this.build(spawn, ROLE_SOLDIER_MELEE);
+            }
+        }
+
+        if (!spawn.spawning && room.energyAvailable > room.energyCapacityAvailable / 2) {
+            // Check if there are some old creeps nearby that could be healed
+            var adjacentOldCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1, {
+                filter: creep => creep.ticksToLive < CREEP_LIFE_TIME / 2
+            });
+            var oldestCreep = _.first(_.sortBy(adjacentOldCreeps, 'ticksToLive'));
+            if (oldestCreep) {
+                spawn.renewCreep(oldestCreep);
             }
         }
     },
