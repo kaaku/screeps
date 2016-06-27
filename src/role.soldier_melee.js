@@ -44,6 +44,8 @@ module.exports = {
             } else if (energy >= 50 && move.length < attack.length) {
                 move.push(MOVE);
                 energy -= 50;
+            } else {
+                break;
             }
         }
 
