@@ -9,8 +9,8 @@ module.exports = {
     run: function (spawn) {
         var room = spawn.room;
 
-        if (room.energyAvailable === room.energyCapacityAvailable ||
-                (utils.countCreeps(room, ROLE_MINER) === 0 && room.energyAvailable >= SPAWN_ENERGY_CAPACITY)) {
+        if (!spawn.spawning && (room.energyAvailable === room.energyCapacityAvailable ||
+                (utils.countCreeps(room, ROLE_MINER) === 0 && room.energyAvailable >= SPAWN_ENERGY_CAPACITY))) {
 
             var minerCount = utils.countCreeps(room, ROLE_MINER),
                     carrierCount = utils.countCreeps(room, ROLE_CARRIER),
