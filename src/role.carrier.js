@@ -6,24 +6,27 @@ module.exports = {
     run: function (carrier) {
 
         carrier.pickupEnergyInRange();
+        if (carrier.carry.energy >= 50) {
+            carrier.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_BUILDER);
+        }
 
         if (_.sum(carrier.carry) === carrier.carryCapacity || carrier.ticksToLive < 50) {
             carrier.memory.inDeliveryMode = true;
         } else if (_.sum(carrier.carry) === 0) {
             carrier.memory.inDeliveryMode = false;
+            carrier.memory.dropOffId = null;
         }
 
-        this.transferEnergyToAdjacentBuilders(carrier);
-
         if (carrier.memory.inDeliveryMode) {
-            var dropOff = utils.findClosestEnergyDropOff(carrier.pos);
+            var dropOff = Game.getObjectById(carrier.memory.dropOffId) ||
+                    utils.findClosestEnergyDropOff(carrier.pos, STRUCTURE_CONTAINER);
+            carrier.memory.dropOffId = dropOff ? dropOff.id : null;
             if (dropOff) {
                 if (!carrier.pos.isNearTo(dropOff)) {
                     carrier.moveTo(dropOff);
-                }
-
-                if (carrier.pos.isNearTo(dropOff)) {
-                    carrier.transfer(dropOff, RESOURCE_ENERGY);
+                } else {
+                    carrier.memory.dropOffId = null;
+                    carrier.transferResourcesToAdjacentStructures(RESOURCE_ENERGY, STRUCTURE_CONTAINER);
                 }
             }
         } else {
@@ -44,15 +47,14 @@ module.exports = {
                 }
             } else {
                 // No miners in the room, check for energy piles
-                var energy = carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY);
-                if (energy && !carrier.pos.isNearTo(energy) && !carrier.fatigue) {
-                    carrier.moveTo(energy);
+                var energyPile = Game.getObjectById(carrier.memory.energyPileId) ||
+                        carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY);
+                carrier.memory.energyPileId = energyPile ? energyPile.id : null;
+                if (energyPile && !carrier.pos.isNearTo(energyPile) && !carrier.fatigue) {
+                    carrier.moveTo(energyPile);
                 }
             }
         }
-
-        // In case we moved. Energy pickups are free!
-        carrier.pickupEnergyInRange();
     },
 
     getBody: function (energy) {
@@ -78,20 +80,6 @@ module.exports = {
         return carry.concat(move);
     },
 
-    transferEnergyToAdjacentBuilders: function (carrier) {
-        if (carrier.carry.energy > 0) {
-            var adjacentNonFullBuilders = carrier.pos.findInRange(FIND_MY_CREEPS, 1, {
-                filter: creep => creep.memory.role === ROLE_BUILDER && creep.carry.energy < creep.carryCapacity
-            });
-            _.forEach(adjacentNonFullBuilders, function (builder) {
-                if (carrier.carry.energy > 0) {
-                    carrier.transfer(builder, RESOURCE_ENERGY);
-                }
-            })
-        }
-
-    },
-
     getMiner: function (carrier) {
 
         var miner = Game.getObjectById(carrier.memory.minerId);
@@ -105,7 +93,6 @@ module.exports = {
                 carrier.memory.minerId = soloMiner.id;
                 carrier.memory.sourceId = soloMiner.memory.sourceId;
                 carrier.memory.hasOwnMiner = true;
-                soloMiner.memory.carrierId = carrier.id;
                 return soloMiner;
             }
 
@@ -115,7 +102,7 @@ module.exports = {
                 filter: creep => creep.memory.role === ROLE_MINER
             });
             // Work with the farthest off miner, as it probably needs the most help
-            var farthestMiner = _.tail(_.sortBy(miners, function (miner) {
+            var farthestMiner = _.last(_.sortBy(miners, function (miner) {
                 return carrier.pos.getRangeTo(miner);
             }));
             if (farthestMiner) {
@@ -129,10 +116,6 @@ module.exports = {
             return null;
         } else {
             // The carrier is linked to an existing miner
-            if (!miner.memory.carrierId) {
-                // Make sure the miner is aware of the linkage as well
-                miner.memory.carrierId = carrier.id;
-            }
             return miner;
         }
     },

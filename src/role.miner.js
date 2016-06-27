@@ -7,37 +7,53 @@ module.exports = {
 
         var carrier = this.getCarrier(miner);
 
-        if (carrier && miner.carry.energy > 0 && miner.pos.isNearTo(carrier) &&
-                _.sum(carrier.carry) < carrier.carryCapacity) {
-            miner.transfer(carrier, RESOURCE_ENERGY);
+        if (miner.carry.energy >= 50) {
+            miner.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, [ROLE_CARRIER, ROLE_BUILDER]);
         }
 
-        if (miner.carryCapacity - miner.carry.energy < miner.getActiveBodyparts(WORK) * HARVEST_POWER * 0.5) {
-            // Over half of the work capacity of this miner is about to go to waste -> dump resources
-            if (carrier) {
-                // A carrier exists; just dump everything on the ground and trust it gets picked up
-                miner.drop(RESOURCE_ENERGY);
+        if (_.sum(miner.carry) === miner.carryCapacity) {
+            if (!carrier) {
+                // No carrier available; the miner needs to deliver the energy on its own
+                miner.memory.inDeliveryMode = true;
             } else {
-                // No carrier found -> take the energy to closest structure
-                var dropOff = utils.findClosestEnergyDropOff(miner.pos);
-                if (dropOff) {
-                    if (!miner.pos.isNearTo(dropOff)) {
-                        miner.moveTo(dropOff);
-                    }
-
-                    if (miner.pos.isNearTo(dropOff)) {
-                        miner.transfer(dropOff, RESOURCE_ENERGY);
-                    }
-                }
-
-                return;
+                // A carrier exists; just dump everything and trust it gets picked up
+                miner.drop(RESOURCE_ENERGY);
             }
+        } else if (_.sum(miner.carry) === 0) {
+            miner.memory.inDeliveryMode = false;
+            miner.memory.dropOffId = null;
+        }
+
+        if (miner.memory.inDeliveryMode) {
+            var dropOff = Game.getObjectById(miner.memory.dropOffId) ||
+                    utils.findClosestEnergyDropOff(miner.pos, STRUCTURE_CONTAINER);
+            miner.memory.dropOffId = dropOff ? dropOff.id : null;
+            if (dropOff) {
+                if (!miner.pos.isNearTo(dropOff)) {
+                    miner.moveTo(dropOff);
+                } else {
+                    miner.memory.dropOffId = null;
+                    miner.transferResourcesToAdjacentStructures(RESOURCE_ENERGY, STRUCTURE_CONTAINER);
+                }
+            }
+
+            return;
         }
 
         var source = Game.getObjectById(miner.memory.sourceId);
         if (source && miner.pos.isNearTo(source)) {
-            miner.harvest(source);
-        } else {
+            if (!carrier) {
+                // TODO: Temporary container handling
+                var container = _.first(miner.pos.findInRange(FIND_STRUCTURES, 1, {
+                    filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0
+                }));
+                if (container) {
+                    container.transfer(miner, RESOURCE_ENERGY);
+                }
+            } else {
+                miner.harvest(source);
+            }
+        } else if (!miner.fatigue) {
             miner.moveTo(source);
         }
     },
@@ -74,9 +90,12 @@ module.exports = {
      * @param {Creep} miner
      */
     getCarrier: function (miner) {
-        return miner.pos.findClosestByRange(FIND_MY_CREEPS, {
+        var carrier = Game.getObjectById(miner.memory.carrierId) || miner.pos.findClosestByRange(FIND_MY_CREEPS, {
             filter: creep => creep.memory.role === ROLE_CARRIER && creep.memory.sourceId === miner.memory.sourceId
         });
+        miner.memory.carrierId = carrier ? carrier.id : null;
+
+        return carrier;
     },
 
     addPart: function (energy, parts, part) {

@@ -11,8 +11,6 @@ Creep.prototype.log = function (message) {
  * energy has to be used to build new creeps, no energy will be given
  * to the creep. Otherwise the maximum amount will be transferred.
  *
- * @type {function}
- *
  * @param {StructureSpawn|StructureExtension|StructureStorage|StructureContainer} [target] The structure to request energy from
  *
  * @return {number|OK|ERR_NOT_OWNER|ERR_NOT_ENOUGH_RESOURCES|ERR_INVALID_TARGET|ERR_FULL|ERR_NOT_IN_RANGE|ERR_INVALID_ARGS}
@@ -49,8 +47,6 @@ Creep.prototype.requestEnergyFrom = function (target) {
 };
 /**
  * Makes the creep pick up all energy in the adjacent squares.
- *
- * @type {function}
  */
 Creep.prototype.pickupEnergyInRange = function () {
     if (this.carry.energy < this.carryCapacity) {
@@ -59,6 +55,89 @@ Creep.prototype.pickupEnergyInRange = function () {
             self.pickup(resource);
         });
     }
+};
+/**
+ * Transfers resources of the given type to adjacent creeps. If this creep has no
+ * resources of the given type, or if no applicable creeps are nearby, does nothing.
+ *
+ * @param {String} resourceType The type of resource to transfer
+ * @param {String|Array} roles Only transfer resources to creeps with the given role.
+ * If no value is given, transfers to any adjacent creep
+ */
+Creep.prototype.transferResourcesToAdjacentCreeps = function (resourceType = RESOURCE_ENERGY, roles = []) {
+    if (_.isString(roles)) {
+        roles = [roles];
+    }
+
+    if (this.carry[resourceType] > 0) {
+        var adjacentNonFullCreeps = this.pos.findInRange(FIND_MY_CREEPS, 1, {
+            filter: creep => (roles.length === 0 || _.includes(roles, creep.memory.role)) &&
+            _.sum(creep.carry) < creep.carryCapacity
+        });
+
+        var self = this;
+        _.forEach(adjacentNonFullCreeps, function (creep) {
+            if (self.carry[resourceType] > 0) {
+                self.transfer(creep, resourceType);
+            }
+        })
+    }
+
+};
+/**
+ * Transfers resources of the given type to the adjacent structures that have free
+ * capacity. If the creep carries no energy, or if there are no such structures nearby,
+ * does nothing. Only transfers resources to neutral structures and structures owned
+ * by you.
+ *
+ * @param {String} resourceType The type of resource to transfer
+ * @param {String|Array} ignoreStructureTypes One or more structure types that are ignored by
+ * this method (i.e. energy won't be transferred to structures of the given type(s))
+ */
+Creep.prototype.transferResourcesToAdjacentStructures = function (resourceType = RESOURCE_ENERGY,
+                                                                  ignoreStructureTypes = []) {
+    if (_.isString(ignoreStructureTypes)) {
+        ignoreStructureTypes = [ignoreStructureTypes];
+    }
+
+    if (this.carry[resourceType] > 0) {
+        var structures = this.pos.findInRange(FIND_STRUCTURES, 1, {
+            filter: structure => {
+                var type = structure.structureType;
+                return !_.includes(ignoreStructureTypes, type) &&
+                        structure.canReceiveResources(resourceType) &&
+                        (_.isUndefined(structure.my) || structure.my === true)
+            }
+        });
+
+        var self = this;
+        _.forEach(structures, function (structure) {
+            if (self.carry[resourceType] > 0) {
+                self.transfer(structure, resourceType);
+            }
+        })
+    }
+};
+/**
+ * Determines whether this structure can currently receive resources of the given type.
+ *
+ * @param {String} resourceType The type of resource that someone is trying to transfer
+ * to this structure
+ * @returns {boolean} True, if this structure can currently receive at least 1 resource
+ * of the given type, false otherwise
+ */
+Structure.prototype.canReceiveResources = function (resourceType = RESOURCE_ENERGY) {
+    return (_.isObject(this.store) && _.isNumber(this.storeCapacity) &&
+            _.sum((this.store) < this.storeCapacity)) || (resourceType === RESOURCE_ENERGY &&
+            _.isNumber(this.energy) && _.isNumber(this.energyCapacity) &&
+            this.energy < this.energyCapacity);
+};
+/**
+ * @returns {boolean} True, if this structure can currently receive at least one unit
+ * of energy, false otherwise
+ */
+Structure.prototype.canReceiveEnergy = function () {
+    return this.canReceiveResources(RESOURCE_ENERGY);
 };
 
 

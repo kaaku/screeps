@@ -17,23 +17,22 @@ module.exports = {
     },
 
     /**
-     * Returns the closest spawn, extension, storage or tower from the given
-     * position that isn't already at full energy capacity.
+     * Returns the closest structure from the given position that isn't already at
+     * full energy capacity.
      *
-     * @param position The position to use as the source of the search
-     * @returns {Structure} The closest structure, or null if no suitable
-     * structure was found
+     * @param {RoomPosition} position The position to use as the source of the search
+     * @param {String|Array} ignoreStructureTypes One or more structure types to
+     * ignore in the search
+     * @returns {Structure} The closest structure that can receive energy, or null
+     * if no structures in the room can currently receive energy
      */
-    findClosestEnergyDropOff: function (position) {
-        return position.findClosestByRange(FIND_MY_STRUCTURES, {
-            filter: structure => {
-                return ((structure.structureType == STRUCTURE_EXTENSION ||
-                        structure.structureType == STRUCTURE_SPAWN ||
-                        structure.structureType == STRUCTURE_TOWER) &&
-                        structure.energy < structure.energyCapacity) ||
-                        (structure.structureType == STRUCTURE_STORAGE &&
-                        _.sum(structure.store) < structure.storeCapacity);
-            }
+    findClosestEnergyDropOff: function (position, ignoreStructureTypes = []) {
+        if (_.isString(ignoreStructureTypes)) {
+            ignoreStructureTypes = [ignoreStructureTypes];
+        }
+        return position.findClosestByRange(FIND_STRUCTURES, {
+            filter: structure => !_.contains(ignoreStructureTypes, structure.structureType) &&
+            structure.canReceiveEnergy()
         });
     },
 
