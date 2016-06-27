@@ -10,7 +10,7 @@ module.exports = {
         var room = spawn.room;
 
         if (room.energyAvailable === room.energyCapacityAvailable ||
-                (utils.countCreeps(room, ROLE_MINER) === 0 && spawn.energy === spawn.energyCapacity)) {
+                (utils.countCreeps(room, ROLE_MINER) === 0 && room.energyAvailable >= SPAWN_ENERGY_CAPACITY)) {
 
             var minerCount = utils.countCreeps(room, ROLE_MINER),
                     carrierCount = utils.countCreeps(room, ROLE_CARRIER),
@@ -26,7 +26,8 @@ module.exports = {
                 }
             } else if (freeSource) {
                 this.build(spawn, ROLE_MINER, {sourceId: freeSource.id});
-            } else if (builderCount < 3) {
+            } else if (builderCount < 6) {
+                // TODO: Make target builder count dynamic
                 this.build(spawn, ROLE_BUILDER);
             } else if (utils.countCreeps(room, ROLE_SOLDIER_MELEE) < 3) {
                 this.build(spawn, ROLE_SOLDIER_MELEE);
