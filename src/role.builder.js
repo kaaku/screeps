@@ -14,6 +14,11 @@ module.exports = {
         }
 
         if (builder.memory.building) {
+            if (builder.room.controller.ticksToDowngrade < 1000) {
+                // Controller about to downgrade; this takes priority
+                this.upgradeController(builder);
+            }
+
             // Building mode on; build something or upgrade the controller
 
             var site = Game.getObjectById(builder.memory.constructionSiteId);
@@ -44,12 +49,7 @@ module.exports = {
                     builder.repair(repairTarget);
                 }
             } else {
-                var controller = builder.room.controller;
-                if (!builder.pos.inRangeTo(controller, 3)) {
-                    builder.moveTo(controller);
-                } else {
-                    builder.upgradeController(controller);
-                }
+                this.upgradeController(builder);
             }
         } else {
             // Energy pickup mode
@@ -89,10 +89,12 @@ module.exports = {
             return closestWeakOwnedStructure;
         }
 
+        // TODO: Make wall hit point threshold dynamic
         var closestWeakNeutralStructure = builder.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: structure => {
-                return _.includes([STRUCTURE_WALL, STRUCTURE_ROAD, STRUCTURE_CONTAINER], structure.structureType) &&
-                        structure.hits / structure.hitsMax < 0.5
+                return (_.includes([STRUCTURE_ROAD, STRUCTURE_CONTAINER], structure.structureType) &&
+                        structure.hits / structure.hitsMax < 0.5) ||
+                        (structure.structureType === STRUCTURE_WALL && structure.hits < 100000)
             }
         });
         if (closestWeakNeutralStructure) {
@@ -100,6 +102,15 @@ module.exports = {
         }
 
         return null;
+    },
+
+    upgradeController: function (builder) {
+        var controller = builder.room.controller;
+        if (!builder.pos.inRangeTo(controller, 3)) {
+            builder.moveTo(controller);
+        } else {
+            builder.upgradeController(controller);
+        }
     },
 
     getBody: function (energy) {
