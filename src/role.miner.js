@@ -8,7 +8,10 @@ module.exports = {
         var carrier = this.getCarrier(miner);
 
         if (miner.carry.energy >= 50) {
-            miner.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, [ROLE_CARRIER, ROLE_BUILDER]);
+            miner.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_CARRIER);
+            if (miner.room.hasSurplusEnergy()) {
+                miner.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_BUILDER);
+            }
         }
 
         if (_.sum(miner.carry) === miner.carryCapacity) {

@@ -6,7 +6,7 @@ module.exports = {
     run: function (carrier) {
 
         carrier.pickupEnergyInRange();
-        if (carrier.carry.energy >= 50) {
+        if (carrier.carry.energy >= 50 && carrier.room.hasSurplusEnergy()) {
             carrier.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_BUILDER);
         }
 

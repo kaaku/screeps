@@ -2,6 +2,9 @@
 Creep.prototype.canHeal = function () {
     return this.getActiveBodyparts(HEAL) > 0;
 };
+Creep.prototype.canAttack = function () {
+    return this.getActiveBodyparts(ATTACK) > 0 || this.getActiveBodyparts(RANGED_ATTACK) > 0;
+};
 Creep.prototype.log = function (message) {
     console.log(`${this.name} (${this.memory.role}): ${message}`);
 };
@@ -16,24 +19,10 @@ Creep.prototype.log = function (message) {
  * @return {number|OK|ERR_NOT_OWNER|ERR_NOT_ENOUGH_RESOURCES|ERR_INVALID_TARGET|ERR_FULL|ERR_NOT_IN_RANGE|ERR_INVALID_ARGS}
  */
 Creep.prototype.requestEnergyFrom = function (target) {
-    if (this.room.find(FIND_HOSTILE_CREEPS).length > 0) {
-        // Busy building fighting creeps!  :)
-        return ERR_BUSY;
-    }
-
-    var energySourceCount = this.room.find(FIND_SOURCES).length;
-    var miners = this.room.find(FIND_MY_CREEPS, {
-        filter: creep => creep.memory.role === ROLE_MINER
-    });
-    var carriers = this.room.find(FIND_MY_CREEPS, {
-        filter: creep => creep.memory.role === ROLE_CARRIER
-    });
-    var lowestCreepTickCount = _.min(_.map(miners, 'ticksToLive').concat(_.min(carriers, 'ticksToLive')));
     var energyInTarget = _.isNumber(target.energy) ? target.energy :
             target.store && _.isNumber(target.store[RESOURCE_ENERGY]) ? target.store[RESOURCE_ENERGY] : 0;
 
-    if (energyInTarget > 0 && miners.length >= energySourceCount && carriers.length >= miners.length &&
-            lowestCreepTickCount > 50) {
+    if (energyInTarget > 0 && this.room.hasSurplusEnergy()) {
         if (typeof target.transfer === 'function') {
             return target.transfer(this, RESOURCE_ENERGY);
         } else if (typeof target.transferEnergy === 'function') {
@@ -44,6 +33,29 @@ Creep.prototype.requestEnergyFrom = function (target) {
     }
 
     return ERR_NOT_ENOUGH_ENERGY;
+};
+/**
+ * @returns {boolean} True, if this room has energy available e.g. for building,
+ * repairing and upgrading. False, if all the energy is needed for "emergency"
+ * actions, e.g. building fighters to fend off hostiles, or replacing dead or
+ * soon-to-die worker creeps.
+ */
+Room.prototype.hasSurplusEnergy = function () {
+    if (this.find(FIND_HOSTILE_CREEPS).length > 0) {
+        // Busy building fighting creeps!  :)
+        return false;
+    }
+
+    var energySourceCount = this.find(FIND_SOURCES).length;
+    var miners = this.find(FIND_MY_CREEPS, {
+        filter: creep => creep.memory.role === ROLE_MINER
+    });
+    var carriers = this.find(FIND_MY_CREEPS, {
+        filter: creep => creep.memory.role === ROLE_CARRIER
+    });
+    var lowestCreepTickCount = _.min(_.map(miners, 'ticksToLive').concat(_.min(carriers, 'ticksToLive')));
+
+    return miners.length >= energySourceCount && carriers.length >= miners.length && lowestCreepTickCount > 50;
 };
 /**
  * Makes the creep pick up all energy in the adjacent squares.
@@ -139,6 +151,25 @@ Structure.prototype.canReceiveResources = function (resourceType = RESOURCE_ENER
 Structure.prototype.canReceiveEnergy = function () {
     return this.canReceiveResources(RESOURCE_ENERGY);
 };
+Structure.prototype.getFromMemory = function (key) {
+    this.initMemory();
+    return this.memory[key];
+};
+Structure.prototype.setToMemory = function (key, value) {
+    this.initMemory();
+    this.memory[key] = value;
+};
+Structure.prototype.initMemory = function () {
+    if (_.isUndefined(this.memory)) {
+        if (_.isUndefined(Memory.structures)) {
+            Memory.structures = {};
+        }
+        if (_.isUndefined(Memory.structures[this.id])) {
+            Memory.structures[this.id] = {};
+        }
+        this.memory = Memory.structures[this.id];
+    }
+};
 
 
 global.ROLE_HARVESTER = 'harvester';
@@ -159,6 +190,7 @@ global.Roles = {
 
 var _ = require('lodash');
 var spawnController = require('./spawn');
+var towerController = require('./tower');
 
 module.exports.loop = function () {
 
@@ -169,6 +201,12 @@ module.exports.loop = function () {
     _.forEach(Game.creeps, function (creep) {
         if (!creep.spawning) {
             Roles[creep.memory.role].run(creep);
+        }
+    });
+
+    _.forEach(Game.structures, function (structure) {
+        if (structure.structureType === STRUCTURE_TOWER) {
+            towerController.run(structure);
         }
     });
 };
