@@ -93,9 +93,16 @@ module.exports = {
      * @param {Creep} miner
      */
     getCarrier: function (miner) {
-        var carrier = Game.getObjectById(miner.memory.carrierId) || miner.pos.findClosestByRange(FIND_MY_CREEPS, {
-            filter: creep => creep.memory.role === ROLE_CARRIER && creep.memory.sourceId === miner.memory.sourceId
-        });
+        var carrier = Game.getObjectById(miner.memory.carrierId);
+
+        if (!carrier || carrier.memory.minerId !== miner.id) {
+            // Carriers can switch the miner they work with in certain cases, so it's
+            // important to check that the carrier is still linked to this miner
+            carrier = miner.pos.findClosestByRange(FIND_MY_CREEPS, {
+                filter: creep => creep.memory.role === ROLE_CARRIER && creep.memory.sourceId === miner.memory.sourceId
+            });
+        }
+
         miner.memory.carrierId = carrier ? carrier.id : null;
 
         return carrier;
