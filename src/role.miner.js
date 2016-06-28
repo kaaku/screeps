@@ -72,7 +72,7 @@ module.exports = {
         while (energy >= cheapestPart) {
             if (!move.length) {
                 energy = this.addPart(energy, move, MOVE);
-            } else if (energy >= BODYPART_COST[WORK] && work.length <= 5 && work.length <= 3 * carry.length) {
+            } else if (energy >= BODYPART_COST[WORK] && work.length < 5 && work.length <= 3 * carry.length) {
                 // 5 WORK parts is enough to deplete an energy source
                 energy = this.addPart(energy, work, WORK);
             } else if (energy >= BODYPART_COST[CARRY] && carry.length <= 2) {
