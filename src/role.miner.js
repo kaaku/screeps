@@ -28,36 +28,9 @@ module.exports = {
         }
 
         if (miner.memory.inDeliveryMode) {
-            var dropOff = Game.getObjectById(miner.memory.dropOffId) ||
-                    utils.findClosestEnergyDropOff(miner.pos, STRUCTURE_CONTAINER);
-            miner.memory.dropOffId = dropOff ? dropOff.id : null;
-            if (dropOff) {
-                if (!miner.pos.isNearTo(dropOff)) {
-                    miner.moveTo(dropOff);
-                } else {
-                    miner.memory.dropOffId = null;
-                    miner.transferResourcesToAdjacentStructures(RESOURCE_ENERGY, STRUCTURE_CONTAINER);
-                }
-            }
-
-            return;
-        }
-
-        var source = Game.getObjectById(miner.memory.sourceId);
-        if (source && miner.pos.isNearTo(source)) {
-            if (!carrier) {
-                // TODO: Temporary container handling
-                var container = _.first(miner.pos.findInRange(FIND_STRUCTURES, 1, {
-                    filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0
-                }));
-                if (container) {
-                    container.transfer(miner, RESOURCE_ENERGY);
-                }
-            } else {
-                miner.harvest(source);
-            }
-        } else if (!miner.fatigue) {
-            miner.moveTo(source);
+            this.deliverResources(miner);
+        } else {
+            this.harvestResources(miner, carrier !== null);
         }
     },
 
@@ -84,6 +57,63 @@ module.exports = {
         }
 
         return work.concat(carry).concat(move);
+    },
+
+    deliverResources: function (miner) {
+        var dropOff = Game.getObjectById(miner.memory.dropOffId) ||
+                utils.findClosestEnergyDropOff(miner.pos, STRUCTURE_CONTAINER);
+        miner.memory.dropOffId = dropOff ? dropOff.id : null;
+        if (dropOff) {
+            if (!miner.pos.isNearTo(dropOff)) {
+                miner.moveTo(dropOff);
+            } else {
+                miner.memory.dropOffId = null;
+                miner.transferResourcesToAdjacentStructures(RESOURCE_ENERGY, STRUCTURE_CONTAINER);
+            }
+        }
+    },
+
+    harvestResources: function (miner, hasCarrier) {
+        var source = Game.getObjectById(miner.memory.sourceId);
+        var container = this.getContainer(miner);
+
+        if (container && !miner.pos.isEqualTo(container.pos)) {
+            miner.moveTo(container);
+        } else if (!miner.pos.isNearTo(source)) {
+            miner.moveTo(source);
+        } else {
+            if (!hasCarrier && container && container.store.energy > 0) {
+                // No carrier available -> take the resources from the container and deliver them
+                container.transfer(miner, RESOURCE_ENERGY);
+            } else {
+                miner.harvest(source);
+                if (!container) {
+                    var constructionSiteExists = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 1, {
+                                filter: site => site.structureType === STRUCTURE_CONTAINER
+                            }).length > 0;
+                    if (!constructionSiteExists) {
+                        // No container built and no construction site created -> create a site
+                        miner.pos.createConstructionSite(STRUCTURE_CONTAINER);
+                    }
+                }
+            }
+        }
+    },
+
+    getContainer: function (miner) {
+        var container = Game.getObjectById(miner.memory.containerId);
+
+        if (!container) {
+            var source = Game.getObjectById(miner.memory.sourceId);
+            if (source) {
+                container = _.first(source.pos.findInRange(FIND_STRUCTURES, 1, {
+                    filter: structure => structure.structureType === STRUCTURE_CONTAINER
+                }));
+                miner.memory.containerId = container ? container.id : null;
+            }
+        }
+
+        return container;
     },
 
     /**
