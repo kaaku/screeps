@@ -80,7 +80,7 @@ module.exports = {
     },
 
     createCreep: function (spawn, role, memory = {}) {
-        var body = Roles[role].getBody(spawn.room.energyAvailable);
+        var body = ROLES[role].getBody(spawn.room.energyAvailable);
         var result = spawn.createCreep(body, undefined, _.assign(memory, {role: role}));
         if (_.isString(result)) {
             console.log('Built a new ' + role + ', ' + result + ' (' + body + ')');
