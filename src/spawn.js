@@ -7,36 +7,57 @@ module.exports = {
      * @param {Spawn} spawn
      */
     run: function (spawn) {
+
+        if (_.isObject(spawn.spawning)) {
+            return;
+        }
+
         var room = spawn.room;
+
+        // Scouts are currently used for getting visibility to rooms marked for
+        // occupation, so they're prioritized (as they're so cheap)
+        if (room.energyAvailable >= BODYPART_COST[MOVE]) {
+            var flag = _.first(_.filter(Game.flags, flag => {
+                return flag.memory.scoutingNeeded && !flag.memory.reserved && !Game.getObjectById(flag.memory.scoutId) && !_.contains(_.keys(Game.rooms), flag.pos.roomName);
+            }));
+            if (flag) {
+                console.log(`Found flag marked for scouting with name '${flag.name}' from room ${flag.pos.roomName}, creating scout`);
+                flag.memory.reserved = true;
+                delete flag.memory.scoutId;
+                this.createCreep(spawn, ROLE_SCOUT);
+                return;
+            }
+        }
 
         var minerCount = utils.countCreeps(room, ROLE_MINER),
                 carrierCount = utils.countCreeps(room, ROLE_CARRIER);
 
-        if (!spawn.spawning && (room.energyAvailable === room.energyCapacityAvailable ||
-                ((minerCount === 0 || carrierCount === 0) && room.energyAvailable >= SPAWN_ENERGY_CAPACITY))) {
+        if (room.energyAvailable === room.energyCapacityAvailable ||
+                ((minerCount === 0 || carrierCount === 0) && room.energyAvailable >= SPAWN_ENERGY_CAPACITY)) {
 
             var builderCount = utils.countCreeps(room, ROLE_BUILDER),
                     freeSource = this.findClosestFreeEnergySource(spawn);
 
-            if (minerCount > 0 && carrierCount > 0 && room.find(FIND_HOSTILE_CREEPS).length > 0) {
-                this.build(spawn, ROLE_SOLDIER_MELEE);
+            if (minerCount > 0 && carrierCount > 0 &&
+                    (room.find(FIND_HOSTILE_CREEPS).length > 0 || room.memory.occupationInProgress)) {
+                this.createFightingCreep(spawn);
             } else if (carrierCount < minerCount) {
                 var soloMiner = utils.findClosestSoloMiner(spawn.pos);
                 if (soloMiner) {
-                    this.build(spawn, ROLE_CARRIER, {minerId: soloMiner.id, sourceId: soloMiner.memory.sourceId});
+                    this.createCreep(spawn, ROLE_CARRIER, {minerId: soloMiner.id, sourceId: soloMiner.memory.sourceId});
                 }
             } else if (freeSource) {
-                this.build(spawn, ROLE_MINER, {sourceId: freeSource.id});
-            } else if (builderCount < 6) {
+                this.createCreep(spawn, ROLE_MINER, {sourceId: freeSource.id});
+            } else if (builderCount < 4) {
                 // TODO: Make target builder count dynamic
-                this.build(spawn, ROLE_BUILDER);
-            } else if (utils.countCreeps(room, ROLE_SOLDIER_MELEE) < 3) {
-                this.build(spawn, ROLE_SOLDIER_MELEE);
+                this.createCreep(spawn, ROLE_BUILDER);
+            } else if (utils.countCreeps(room, [ROLE_SOLDIER_MELEE, ROLE_SOLDIER_MEDIC]) < 3) {
+                // Keep a reserve of 2 soldiers and 1 medic
+                this.createFightingCreep(spawn);
             }
         }
 
-        if (!spawn.spawning && room.energyAvailable > room.energyCapacityAvailable / 2 &&
-                room.hasSurplusEnergy()) {
+        if (room.energyAvailable > room.energyCapacityAvailable / 2 && room.hasSurplusEnergy()) {
             // Check if there are some old creeps nearby that could be healed
             var adjacentOldCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1, {
                 filter: creep => creep.ticksToLive < CREEP_LIFE_TIME / 2
@@ -48,7 +69,17 @@ module.exports = {
         }
     },
 
-    build: function (spawn, role, memory = {}) {
+    createFightingCreep: function (spawn) {
+        var soldierCount = utils.countCreeps(spawn.room, ROLE_SOLDIER_MELEE);
+        var medicCount = utils.countCreeps(spawn.room, ROLE_SOLDIER_MEDIC);
+        // There should be 1 medic per 4 soldiers, with the first medic being built after 2 soldiers
+        var role = soldierCount < 2 || soldierCount < medicCount * 4 + 2 ?
+                ROLE_SOLDIER_MELEE : ROLE_SOLDIER_MEDIC;
+
+        return this.createCreep(spawn, role);
+    },
+
+    createCreep: function (spawn, role, memory = {}) {
         var body = Roles[role].getBody(spawn.room.energyAvailable);
         var result = spawn.createCreep(body, undefined, _.assign(memory, {role: role}));
         if (_.isString(result)) {

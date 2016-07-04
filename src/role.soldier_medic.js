@@ -1,51 +1,87 @@
+var _ = require('lodash');
+
 module.exports = {
 
-    run: function (creep) {
-        var friendlies = creep.room.find(FIND_MY_CREEPS);
-        var weakest, lowestHealth = 1;
+    run: function (medic) {
+        var healTarget = this.getHealTarget(medic);
 
-        // TODO: Follow the previous heal target
-
-        _.forEach(friendlies, function (creep) {
-            var healthLeft = creep.hits / creep.hitsMax;
-            if (healthLeft < lowestHealth) {
-                lowestHealth = healthLeft;
-                weakest = creep;
+        if (healTarget && medic.canHeal() && medic.heal(healTarget) === ERR_NOT_IN_RANGE) {
+            if (medic.canMove()) {
+                medic.moveTo(healTarget);
+            } else {
+                medic.heal(medic);
             }
-        });
+            return;
+        }
 
-        // TODO: Make sure the medic can also heal itself
+        var occupationTarget = medic.memory.occupationTarget;
+        if (occupationTarget && medic.memory.attackInProgress) {
+            var occupationRallyPoint = medic.getOccupationRallyPoint();
+            if (occupationRallyPoint && !medic.pos.isNearTo(occupationRallyPoint)) {
+                medic.moveTo(occupationRallyPoint);
+                return;
+            }
+        }
 
-        if (weakest) {
-            if (creep.heal(weakest) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(weakest);
-            }
-        } else {
-            var spawn = creep.pos.findClosestByRange(FIND_MY_SPAWNS);
-            if (spawn && creep.pos.getRangeTo(spawn) > 3) {
-                creep.moveTo(spawn);
-            }
+        var rallyPoint = medic.getRallyPoint();
+        if (rallyPoint && !medic.pos.isNearTo(rallyPoint)) {
+            medic.moveTo(rallyPoint);
         }
     },
 
+    getHealTarget: function (medic) {
+        var target = Game.getObjectById(medic.memory.healTarget);
+        if (target && target.hits < target.hitsMax / 2) {
+            // The target is under 50%, just keep healing
+            return target;
+        }
+
+        target = _.first(_.sortBy(medic.room.find(FIND_MY_CREEPS, {
+            filter: creep => creep.hits < creep.hitsMax
+        }), creep => creep.hits / creep.hitsMax));
+
+        if (target) {
+            medic.memory.healTarget = target.id;
+        }
+
+        return target;
+    },
+
     getBody: function (energy) {
-        var tough = [], attack = [], heal = [], move = [];
-        while (energy >= 10) {
-            if (energy < 50) {
-                tough.push(TOUGH);
-                energy -= 10;
-            } else if (energy >= 50 && move.length < heal.length) {
-                move.push(MOVE);
-                energy -= 50;
-            } else if (energy >= 80 && attack.length < heal.length - 1) {
-                attack.push(ATTACK);
-                energy -= 80;
-            } else if (energy >= 250) {
-                heal.push(HEAL);
-                energy -= 250;
+        if (energy < BODYPART_COST[HEAL] + BODYPART_COST[MOVE]) {
+            return null;
+        }
+
+        var heal = [], move = [], tough = [];
+        var cheapestPart = _.min([BODYPART_COST[HEAL], BODYPART_COST[MOVE], BODYPART_COST[TOUGH]]);
+
+        while (energy >= cheapestPart) {
+            if (energy >= BODYPART_COST[MOVE] && move.length < heal.length + tough.length) {
+                energy = this.addPart(energy, move, MOVE);
+            } else if (energy >= BODYPART_COST[HEAL]) {
+                energy = this.addPart(energy, heal, HEAL);
+            } else if (energy >= BODYPART_COST[TOUGH]) {
+                energy = this.addPart(energy, tough, TOUGH);
+            } else {
+                break;
             }
         }
 
-        return tough.concat(attack).concat(move).concat(heal);
+        var body = tough;
+        while (move.length > 0 && heal.length > 0) {
+            body.push(move.pop(), heal.pop());
+        }
+        if (move.length > 0) {
+            body.push(move.pop());
+        } else if (heal.length > 0) {
+            body.push(heal.pop());
+        }
+
+        return body;
+    },
+
+    addPart: function (energy, parts, part) {
+        parts.push(part);
+        return energy - BODYPART_COST[part];
     }
 };

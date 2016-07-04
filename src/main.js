@@ -1,10 +1,23 @@
 // TODO: Move these extensions somewhere else
+Creep.prototype.utils = require('./utils');
+
+Creep.prototype.canMove = function () {
+    return this.getActiveBodyparts(MOVE) > 0;
+};
 Creep.prototype.canHeal = function () {
     return this.getActiveBodyparts(HEAL) > 0;
 };
 Creep.prototype.canAttack = function () {
     return this.getActiveBodyparts(ATTACK) > 0 || this.getActiveBodyparts(RANGED_ATTACK) > 0;
 };
+Creep.prototype.getFightingStrength = function () {
+    return this.getActiveBodyparts(ATTACK) * ATTACK_POWER +
+            this.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER +
+            this.getActiveBodyparts(HEAL) * (HEAL_POWER + RANGED_HEAL_POWER) / 2;
+};
+/**
+ * Writes the given message to the log, together with the creeps name and role
+ */
 Creep.prototype.log = function (message) {
     console.log(`${this.name} (${this.memory.role}): ${message}`);
 };
@@ -33,6 +46,41 @@ Creep.prototype.requestEnergyFrom = function (target) {
     }
 
     return ERR_NOT_ENOUGH_ENERGY;
+};
+/**
+ * @returns {RoomPosition} The position in the current room where the army units gather
+ */
+Creep.prototype.getRallyPoint = function () {
+    var rallyPoint = this.utils.getPositionFromMemory(this.memory, 'rallyPoint');
+
+    if (_.isEmpty(rallyPoint)) {
+        var flag = this.pos.findClosestByRange(FIND_FLAGS, {filter: flag => flag.memory.rallyPoint});
+        if (flag) {
+            rallyPoint = flag.pos;
+            this.utils.putPositionToMemory(this.memory, 'rallyPoint', rallyPoint);
+        }
+    }
+
+    return rallyPoint;
+};
+/**
+ * @returns {RoomPosition} The position in a room to be occupied where the attackers
+ * march towards (until they find hostiles to engage)
+ */
+Creep.prototype.getOccupationRallyPoint = function () {
+    var occupationRallyPoint = this.utils.getPositionFromMemory(this.memory, 'occupationRallyPoint');
+
+    if (_.isEmpty(occupationRallyPoint)) {
+        var flag = _.first(_.filter(Game.flags, flag => {
+            return flag.memory.occupy && flag.pos.roomName === this.memory.occupationTarget
+        }));
+        if (flag) {
+            occupationRallyPoint = flag.pos;
+            this.utils.putPositionToMemory(this.memory, 'occupationRallyPoint', occupationRallyPoint);
+        }
+    }
+
+    return occupationRallyPoint;
 };
 /**
  * @returns {boolean} True, if this room has energy available e.g. for building,
@@ -170,6 +218,18 @@ Structure.prototype.initMemory = function () {
         this.memory = Memory.structures[this.id];
     }
 };
+/**
+ * @returns {boolean} True, if this tower has enough energy to attack, false otherwise
+ */
+StructureTower.prototype.canAttack = function () {
+    return this.energy > TOWER_ENERGY_COST;
+};
+/**
+ * @returns {boolean} True, if this tower has enough energy to heal, false otherwise
+ */
+StructureTower.prototype.canHeal = function () {
+    return this.energy > TOWER_ENERGY_COST;
+};
 
 
 global.ROLE_HARVESTER = 'harvester';
@@ -178,6 +238,7 @@ global.ROLE_CARRIER = 'carrier';
 global.ROLE_BUILDER = 'builder';
 global.ROLE_SOLDIER_MELEE = 'soldierMelee';
 global.ROLE_SOLDIER_MEDIC = 'soldierMedic';
+global.ROLE_SCOUT = 'scout';
 
 global.Roles = {
     harvester: require('./role.harvester'),
@@ -185,14 +246,18 @@ global.Roles = {
     carrier: require('./role.carrier'),
     builder: require('./role.builder'),
     soldierMelee: require('./role.soldier_melee'),
-    soldierMedic: require('./role.soldier_medic')
+    soldierMedic: require('./role.soldier_medic'),
+    scout: require('./role.scout')
 };
 
 var _ = require('lodash');
+var armyController = require('./armyController');
 var spawnController = require('./spawn');
 var towerController = require('./tower');
 
 module.exports.loop = function () {
+
+    armyController.run();
 
     _.forEach(Game.spawns, function (spawn) {
         spawnController.run(spawn);
