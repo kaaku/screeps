@@ -28,7 +28,13 @@ module.exports = {
                 return target.hits / target.hitsMax;
             }));
 
-            tower.setToMemory('attackTargetId', target ? target.id : null);
+            if (target) {
+                console.log(`Found new attack target at (${target.pos.x}, ${target.pos.y}) with body ${_.map(target.body, 'type')}, gunning down!`);
+                tower.setToMemory('attackTargetId', target.id);
+            } else {
+                tower.clearFromMemory('attackTargetId');
+            }
+
             return target;
         }
     }

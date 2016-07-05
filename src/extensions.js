@@ -242,6 +242,18 @@ Structure.prototype.getFromMemory = function (key) {
 };
 
 /**
+ * A utility method for deleting a value from the structure's memory object. Useful with
+ * structures that don't have a memory reference of their own, e.g. towers.
+ *
+ * @param {String} key The key whose corresponding value should be deleted
+ */
+Structure.prototype.clearFromMemory = function (key) {
+    if (_.isObject(this.memory) && _.has(this.memory, key)) {
+        delete this.memory[key];
+    }
+};
+
+/**
  * A utility method for setting a value to the structure's memory object. Useful with
  * structures that don't have a memory reference of their own, e.g. towers.
  *
