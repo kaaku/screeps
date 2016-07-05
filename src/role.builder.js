@@ -94,7 +94,7 @@ module.exports = {
             filter: structure => {
                 return (_.includes([STRUCTURE_ROAD, STRUCTURE_CONTAINER], structure.structureType) &&
                         structure.hits / structure.hitsMax < 0.5) ||
-                        (structure.structureType === STRUCTURE_WALL && structure.hits < 1000000)
+                        (structure.structureType === STRUCTURE_WALL && structure.hits < 100000)
             }
         });
         if (closestWeakNeutralStructure) {
