@@ -121,9 +121,9 @@ module.exports = {
         var move = [], carry = [], work = [];
         var cheapestPart = _.min([BODYPART_COST[MOVE], BODYPART_COST[CARRY], BODYPART_COST[WORK]]);
         while (energy >= cheapestPart) {
-            if (energy >= BODYPART_COST[WORK] && (!work.length || work.length < 2 * carry.length)) {
+            if (energy >= BODYPART_COST[WORK] && work.length <= carry.length) {
                 energy = this.addPart(energy, work, WORK);
-            } else if (energy >= BODYPART_COST[MOVE] && (!move.length || move.length <= work.length)) {
+            } else if (energy >= BODYPART_COST[MOVE] && move.length < work.length) {
                 energy = this.addPart(energy, move, MOVE);
             } else if (energy >= BODYPART_COST[CARRY]) {
                 energy = this.addPart(energy, carry, CARRY);
