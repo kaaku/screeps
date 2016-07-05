@@ -51,7 +51,7 @@ module.exports = {
             } else if (builderCount < 4) {
                 // TODO: Make target builder count dynamic
                 this.createCreep(spawn, ROLE_BUILDER);
-            } else if (utils.countCreeps(room, [ROLE_SOLDIER_MELEE, ROLE_SOLDIER_MEDIC]) < 3) {
+            } else if (utils.countCreeps(room, [ROLE_SOLDIER_MELEE, ROLE_SOLDIER_MEDIC]) < 2) {
                 // Keep a reserve of 2 soldiers and 1 medic
                 this.createFightingCreep(spawn);
             }
