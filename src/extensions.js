@@ -212,7 +212,7 @@ Structure.prototype.canReceiveEnergy = function () {
  */
 Structure.prototype.canReceiveResources = function (resourceType = RESOURCE_ENERGY) {
     return (_.isObject(this.store) && _.isNumber(this.storeCapacity) &&
-            _.sum((this.store) < this.storeCapacity)) || (resourceType === RESOURCE_ENERGY &&
+            _.sum(this.store) < this.storeCapacity) || (resourceType === RESOURCE_ENERGY &&
             _.isNumber(this.energy) && _.isNumber(this.energyCapacity) &&
             this.energy < this.energyCapacity);
 };
