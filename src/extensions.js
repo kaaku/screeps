@@ -27,6 +27,28 @@ Creep.prototype.canMove = function () {
 };
 
 /**
+ * Finds the closest structure that can receive energy, and either transfers the
+ * maximum amount of energy to that structure if it's nearby, or moves towards
+ * the structure otherwise.
+ */
+Creep.prototype.deliverEnergy = function () {
+    var dropOff = Game.getObjectById(this.memory.dropOffId);
+
+    if (!dropOff || !dropOff.canReceiveEnergy()) {
+        dropOff = utils.findClosestEnergyDropOff(this.pos, this.room.memory.dropOffContainerIds);
+        this.memory.dropOffId = dropOff ? dropOff.id : null;
+    }
+
+    if (dropOff) {
+        if (!this.pos.isNearTo(dropOff)) {
+            this.moveTo(dropOff);
+        } else {
+            this.transfer(dropOff, RESOURCE_ENERGY);
+        }
+    }
+};
+
+/**
  * @returns {number} A numeric value that gives an indication of how much attack/heal
  * potential this creep has.
  */
@@ -120,65 +142,31 @@ Creep.prototype.requestEnergyFrom = function (target) {
 };
 
 /**
- * Transfers resources of the given type to adjacent creeps. If this creep has no
- * resources of the given type, or if no applicable creeps are nearby, does nothing.
+ * Transfers resources of the given type to an adjacent creep. If there are multiple
+ * adjacent creeps, transfers to the one with the biggest (percentual) resource deficiency.
+ * If this creep has no resources of the given type, or if no applicable creeps are nearby,
+ * does nothing.
  *
  * @param {String} resourceType The type of resource to transfer
  * @param {String|Array} roles Only transfer resources to creeps with the given role.
  * If no value is given, transfers to any adjacent creep
  */
-Creep.prototype.transferResourcesToAdjacentCreeps = function (resourceType = RESOURCE_ENERGY, roles = []) {
-    if (_.isString(roles)) {
-        roles = [roles];
-    }
-
+Creep.prototype.transferResourcesToAdjacentCreep = function (resourceType = RESOURCE_ENERGY, roles = []) {
     if (this.carry[resourceType] > 0) {
+        if (_.isString(roles)) {
+            roles = [roles];
+        }
+
         var adjacentNonFullCreeps = this.pos.findInRange(FIND_MY_CREEPS, 1, {
-            filter: creep => (roles.length === 0 || _.includes(roles, creep.memory.role)) &&
-            _.sum(creep.carry) < creep.carryCapacity
-        });
-
-        var self = this;
-        _.forEach(adjacentNonFullCreeps, function (creep) {
-            if (self.carry[resourceType] > 0) {
-                self.transfer(creep, resourceType);
-            }
-        })
-    }
-};
-
-/**
- * Transfers resources of the given type to the adjacent structures that have free
- * capacity. If the creep carries no energy, or if there are no such structures nearby,
- * does nothing. Only transfers resources to neutral structures and structures owned
- * by you.
- *
- * @param {String} resourceType The type of resource to transfer
- * @param {String|Array} ignoreStructureTypes One or more structure types that are ignored by
- * this method (i.e. energy won't be transferred to structures of the given type(s))
- */
-Creep.prototype.transferResourcesToAdjacentStructures = function (resourceType = RESOURCE_ENERGY,
-                                                                  ignoreStructureTypes = []) {
-    if (_.isString(ignoreStructureTypes)) {
-        ignoreStructureTypes = [ignoreStructureTypes];
-    }
-
-    if (this.carry[resourceType] > 0) {
-        var structures = this.pos.findInRange(FIND_STRUCTURES, 1, {
-            filter: structure => {
-                var type = structure.structureType;
-                return !_.includes(ignoreStructureTypes, type) &&
-                        structure.canReceiveResources(resourceType) &&
-                        (_.isUndefined(structure.my) || structure.my === true)
+            filter: creep => {
+                return (_.isEmpty(roles) || _.includes(roles, creep.memory.role)) &&
+                        _.sum(creep.carry) < creep.carryCapacity
             }
         });
+        var creepWithBiggestDeficiency = _.first(_.sortBy(adjacentNonFullCreeps,
+                creep => _.sum(creep.carry) / creep.carryCapacity));
 
-        var self = this;
-        _.forEach(structures, function (structure) {
-            if (self.carry[resourceType] > 0) {
-                self.transfer(structure, resourceType);
-            }
-        })
+        this.transfer(creepWithBiggestDeficiency, resourceType);
     }
 };
 
@@ -227,6 +215,13 @@ Structure.prototype.canReceiveResources = function (resourceType = RESOURCE_ENER
             _.sum((this.store) < this.storeCapacity)) || (resourceType === RESOURCE_ENERGY &&
             _.isNumber(this.energy) && _.isNumber(this.energyCapacity) &&
             this.energy < this.energyCapacity);
+};
+
+/**
+ * @returns {boolean} True, if this structure is friendly or neutral, false otherwise
+ */
+Structure.prototype.isFriendlyOrNeutral = function () {
+    return _.isUndefined(this.my) || this.my === true;
 };
 
 /**

@@ -8,10 +8,8 @@ module.exports = {
         var carrier = this.getCarrier(miner);
 
         if (miner.carry.energy >= 50) {
-            miner.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_CARRIER);
-            if (miner.room.hasSurplusEnergy()) {
-                miner.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_BUILDER);
-            }
+            miner.transferResourcesToAdjacentCreep(RESOURCE_ENERGY,
+                    (miner.room.hasSurplusEnergy() ? [ROLE_CARRIER, ROLE_BUILDER] : ROLE_CARRIER));
         }
 
         if (_.sum(miner.carry) === miner.carryCapacity) {
@@ -28,7 +26,7 @@ module.exports = {
         }
 
         if (miner.memory.inDeliveryMode) {
-            this.deliverResources(miner);
+            miner.deliverEnergy();
         } else {
             this.harvestResources(miner, carrier !== null);
         }
@@ -59,20 +57,6 @@ module.exports = {
         return work.concat(carry).concat(move);
     },
 
-    deliverResources: function (miner) {
-        var dropOff = Game.getObjectById(miner.memory.dropOffId) ||
-                utils.findClosestEnergyDropOff(miner.pos, STRUCTURE_CONTAINER);
-        miner.memory.dropOffId = dropOff ? dropOff.id : null;
-        if (dropOff) {
-            if (!miner.pos.isNearTo(dropOff)) {
-                miner.moveTo(dropOff);
-            } else {
-                miner.memory.dropOffId = null;
-                miner.transferResourcesToAdjacentStructures(RESOURCE_ENERGY, STRUCTURE_CONTAINER);
-            }
-        }
-    },
-
     harvestResources: function (miner, hasCarrier) {
         var source = Game.getObjectById(miner.memory.sourceId);
         var container = this.getContainer(miner);
@@ -87,6 +71,7 @@ module.exports = {
                 container.transfer(miner, RESOURCE_ENERGY);
             } else {
                 miner.harvest(source);
+
                 if (!container) {
                     var constructionSiteExists = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 1, {
                                 filter: site => site.structureType === STRUCTURE_CONTAINER
@@ -109,7 +94,20 @@ module.exports = {
                 container = _.first(source.pos.findInRange(FIND_STRUCTURES, 1, {
                     filter: structure => structure.structureType === STRUCTURE_CONTAINER
                 }));
-                miner.memory.containerId = container ? container.id : null;
+
+                if (container) {
+                    miner.memory.containerId = container.id;
+
+                    // Save the container in the room memory as a drop off container
+                    var roomMemory = miner.room.memory;
+                    if (_.isUndefined(roomMemory.dropOffContainerIds)) {
+                        roomMemory.dropOffContainerIds = [];
+                    }
+                    if (!_.contains(roomMemory.dropOffContainerIds, container.id)) {
+                        miner.log(`Registering container ${container.id} at (${container.pos.x}, ${container.pos.y}) as a drop off point`);
+                        roomMemory.dropOffContainerIds.push(container.id);
+                    }
+                }
             }
         }
 

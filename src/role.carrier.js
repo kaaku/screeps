@@ -7,7 +7,7 @@ module.exports = {
 
         carrier.pickupEnergyInRange();
         if (carrier.carry.energy >= 50 && carrier.room.hasSurplusEnergy()) {
-            carrier.transferResourcesToAdjacentCreeps(RESOURCE_ENERGY, ROLE_BUILDER);
+            carrier.transferResourcesToAdjacentCreep(RESOURCE_ENERGY, ROLE_BUILDER);
         }
 
         if (_.sum(carrier.carry) === carrier.carryCapacity || carrier.ticksToLive < 50) {
@@ -18,17 +18,7 @@ module.exports = {
         }
 
         if (carrier.memory.inDeliveryMode) {
-            var dropOff = Game.getObjectById(carrier.memory.dropOffId) ||
-                    utils.findClosestEnergyDropOff(carrier.pos, STRUCTURE_CONTAINER);
-            carrier.memory.dropOffId = dropOff ? dropOff.id : null;
-            if (dropOff) {
-                if (!carrier.pos.isNearTo(dropOff)) {
-                    carrier.moveTo(dropOff);
-                } else {
-                    carrier.memory.dropOffId = null;
-                    carrier.transferResourcesToAdjacentStructures(RESOURCE_ENERGY, STRUCTURE_CONTAINER);
-                }
-            }
+            carrier.deliverEnergy();
         } else {
             var miner = this.getMiner(carrier);
             if (miner) {

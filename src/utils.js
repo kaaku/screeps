@@ -24,18 +24,21 @@ module.exports = {
      * full energy capacity.
      *
      * @param {RoomPosition} position The position to use as the source of the search
-     * @param {String|Array} ignoreStructureTypes One or more structure types to
-     * ignore in the search
+     * @param {String|Array} ignoreStructures One or more structure IDs to ignore in
+     * the search
      * @returns {Structure} The closest structure that can receive energy, or null
      * if no structures in the room can currently receive energy
      */
-    findClosestEnergyDropOff: function (position, ignoreStructureTypes = []) {
-        if (_.isString(ignoreStructureTypes)) {
-            ignoreStructureTypes = [ignoreStructureTypes];
+    findClosestEnergyDropOff: function (position, ignoreStructures = []) {
+        if (_.isString(ignoreStructures)) {
+            ignoreStructures = [ignoreStructures];
         }
+
         return position.findClosestByRange(FIND_STRUCTURES, {
-            filter: structure => !_.contains(ignoreStructureTypes, structure.structureType) &&
-            structure.canReceiveEnergy()
+            filter: structure => {
+                return structure.isFriendlyOrNeutral() && !_.contains(ignoreStructures, structure.id) &&
+                        structure.canReceiveEnergy()
+            }
         });
     },
 
