@@ -34,12 +34,31 @@ module.exports = {
             ignoreStructures = [ignoreStructures];
         }
 
-        return position.findClosestByRange(FIND_STRUCTURES, {
+        var room = Game.rooms[position.roomName];
+        if (!room) {
+            return null;
+        }
+
+        var structures = room.find(FIND_STRUCTURES, {
             filter: structure => {
                 return structure.isFriendlyOrNeutral() && !_.contains(ignoreStructures, structure.id) &&
                         structure.canReceiveEnergy()
             }
         });
+
+        var towers = _.filter(structures, s => s.structureType === STRUCTURE_TOWER);
+        if (!_.isEmpty(towers)) {
+            return position.findClosestByRange(towers);
+        }
+
+        var spawnsAndExtensions = _.filter(structures, s => {
+            return s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION;
+        });
+        if (!_.isEmpty(spawnsAndExtensions)) {
+            return position.findClosestByRange(spawnsAndExtensions);
+        }
+
+        return position.findClosestByRange(structures);
     },
 
     /**
