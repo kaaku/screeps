@@ -53,21 +53,7 @@ module.exports = {
             }
         } else {
             // Energy pickup mode
-
-            // TODO: The pickup target ID should probably be cached
-            var energyDeficit = builder.carryCapacity - _.sum(builder.carry);
-            var pickupTarget = builder.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                filter: structure => {
-                    return ((structure.structureType === STRUCTURE_EXTENSION ||
-                            structure.structureType === STRUCTURE_SPAWN) &&
-                            (structure.energy >= energyDeficit ||
-                            structure.energy === structure.energyCapacity)) ||
-                            ((structure.structureType === STRUCTURE_STORAGE ||
-                            structure.structureType === STRUCTURE_CONTAINER) &&
-                            (structure.store.energy >= energyDeficit ||
-                            _.sum(structure.store) === structure.storeCapacity));
-                }
-            });
+            var pickupTarget = this.findClosestEnergyPickup(builder);
 
             if (pickupTarget) {
                 if (!builder.pos.isNearTo(pickupTarget)) {
@@ -77,8 +63,35 @@ module.exports = {
                 }
             }
         }
+    },
 
-        builder.pickupEnergyInRange();
+    findClosestEnergyPickup: function (builder) {
+        var pickup = Game.getObjectById(builder.memory.pickupId);
+        if (pickup && pickup.hasEnergy()) {
+            return pickup;
+        }
+
+        var structures = builder.room.find(FIND_STRUCTURES, {
+            filter: structure => {
+                return structure.isFriendlyOrNeutral() && structure.hasEnergy() &&
+                        structure.structureType !== STRUCTURE_TOWER;
+            }
+        });
+
+        var storagesAndContainers = _.filter(structures, s => {
+            return s.structureType === STRUCTURE_STORAGE || s.structureType === STRUCTURE_CONTAINER;
+        });
+        if (!_.isEmpty(storagesAndContainers)) {
+            pickup = builder.pos.findClosestByRange(storagesAndContainers);
+        } else {
+            pickup = builder.pos.findClosestByRange(structures);
+        }
+
+        if (pickup) {
+            builder.memory.pickupId = pickup.id;
+        }
+
+        return pickup;
     },
 
     findRepairTarget: function (builder) {

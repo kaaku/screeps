@@ -218,6 +218,23 @@ Structure.prototype.canReceiveResources = function (resourceType = RESOURCE_ENER
 };
 
 /**
+ * @return {boolean} True, if this structure has energy, false otherwise
+ */
+Structure.prototype.hasEnergy = function () {
+    return this.hasResources(RESOURCE_ENERGY);
+};
+
+/**
+ * @param {String} resourceType One of the RESOURCE_* constants
+ * @returns {boolean} True, if this structure has resources of the given type,
+ * false otherwise
+ */
+Structure.prototype.hasResources = function (resourceType = RESOURCE_ENERGY) {
+    return (_.isObject(this.store) && this.store[resourceType] > 0) ||
+            (resourceType === RESOURCE_ENERGY && _.isNumber(this.energy) && this.energy > 0);
+};
+
+/**
  * @returns {boolean} True, if this structure is friendly or neutral, false otherwise
  */
 Structure.prototype.isFriendlyOrNeutral = function () {
