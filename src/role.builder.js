@@ -1,4 +1,6 @@
 var _ = require('lodash');
+var utils = require('./utils');
+var taskManager = require('./manager.tasks');
 
 module.exports = {
 
@@ -7,49 +9,33 @@ module.exports = {
 
         builder.pickupEnergyInRange();
 
-        if (builder.memory.building && builder.carry.energy === 0) {
-            builder.memory.building = false;
-        } else if (!builder.memory.building && builder.carry.energy === builder.carryCapacity) {
-            builder.memory.building = true;
+        if (builder.carry.energy === 0) {
+            builder.memory.working = false;
+            if (_.isObject(builder.memory.task)) {
+                let task = builder.memory.task;
+                builder.log(`Stopping work on ${task.type} task ${task.targetId}`);
+                taskManager.stopWorkOnTask(builder.id, task);
+                delete builder.memory.task;
+            }
+        } else if (builder.carry.energy === builder.carryCapacity) {
+            builder.memory.working = true;
+            delete builder.memory.pickupId;
         }
 
-        if (builder.memory.building) {
-            if (builder.room.controller.ticksToDowngrade < 1000) {
-                // Controller about to downgrade; this takes priority
-                this.upgradeController(builder);
-            }
-
-            // Building mode on; build something or upgrade the controller
-
-            var site = Game.getObjectById(builder.memory.constructionSiteId);
-            if (!site) {
-                // No construction site in memory; find the closest started one,
-                // or if none are started, just the closest one
-                site = builder.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
-                            filter: site => site.progress > 0
-                        }) || builder.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
-                builder.memory.constructionSiteId = site ? site.id : null;
-            }
-
-            if (site) {
-                if (!builder.pos.inRangeTo(site, 3)) {
-                    builder.moveTo(site);
-                } else {
-                    builder.build(site);
+        if (builder.memory.working) {
+            let task = builder.memory.task;
+            if (_.isUndefined(task) || !taskManager.isTaskValid(task)) {
+                task = taskManager.getNewTaskFor(builder);
+                if (_.isObject(task)) {
+                    builder.log(`Acquired a new task: ${JSON.stringify(task)}`);
+                    builder.memory.task = task;
                 }
-
-                return;
             }
 
-            var repairTarget = this.findRepairTarget(builder);
-            if (repairTarget) {
-                if (!builder.pos.inRangeTo(repairTarget, 3)) {
-                    builder.moveTo(repairTarget);
-                } else {
-                    builder.repair(repairTarget);
-                }
+            if (task) {
+                this.performTask(builder, task);
             } else {
-                this.upgradeController(builder);
+                delete builder.memory.task;
             }
         } else {
             // Energy pickup mode
@@ -61,6 +47,31 @@ module.exports = {
                 } else {
                     builder.requestEnergyFrom(pickupTarget);
                 }
+            }
+        }
+    },
+
+    performTask: function (builder, task) {
+        let target = Game.getObjectById(task.targetId);
+
+        if (_.contains([TASK_BUILD, TASK_REPAIR, TASK_UPGRADE_CONTROLLER], task.type)) {
+            let range = builder.pos.getRangeTo(target);
+
+            if (range > 2 && builder.fatigue === 0) {
+                // Move one square closer than necessary, so that other potential
+                // workers can get in range easier
+                builder.moveTo(target);
+            }
+
+            if (range <= 3) {
+                // The task type name is the same as the corresponding method name
+                builder[task.type](target);
+            }
+        } else if (task.type === TASK_DELIVER_ENERGY) {
+            if (builder.pos.isNearTo(target)) {
+                builder.transfer(target, RESOURCE_ENERGY);
+            } else {
+                builder.moveTo(target);
             }
         }
     },
@@ -92,38 +103,6 @@ module.exports = {
         }
 
         return pickup;
-    },
-
-    findRepairTarget: function (builder) {
-        var closestWeakOwnedStructure = builder.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-            filter: structure => structure.hits / structure.hitsMax < 0.5
-        });
-        if (closestWeakOwnedStructure) {
-            return closestWeakOwnedStructure;
-        }
-
-        // TODO: Make wall hit point threshold dynamic
-        var closestWeakNeutralStructure = builder.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: structure => {
-                return (_.includes([STRUCTURE_ROAD, STRUCTURE_CONTAINER], structure.structureType) &&
-                        structure.hits / structure.hitsMax < 0.5) ||
-                        (structure.structureType === STRUCTURE_WALL && structure.hits < 100000)
-            }
-        });
-        if (closestWeakNeutralStructure) {
-            return closestWeakNeutralStructure;
-        }
-
-        return null;
-    },
-
-    upgradeController: function (builder) {
-        var controller = builder.room.controller;
-        if (!builder.pos.inRangeTo(controller, 3)) {
-            builder.moveTo(controller);
-        } else {
-            builder.upgradeController(controller);
-        }
     },
 
     getBody: function (energy) {
