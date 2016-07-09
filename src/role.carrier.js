@@ -6,12 +6,15 @@ module.exports = {
     run: function (carrier) {
 
         carrier.pickupEnergyInRange();
+
         if (carrier.carry.energy >= 50 && carrier.room.hasSurplusEnergy()) {
             carrier.transferResourcesToAdjacentCreep(RESOURCE_ENERGY, ROLE_BUILDER);
         }
 
         if (_.sum(carrier.carry) === carrier.carryCapacity || carrier.ticksToLive < 50) {
             carrier.memory.inDeliveryMode = true;
+            carrier.memory.pickupTargetId = null;
+            carrier.memory.energyPileId = null;
         } else if (_.sum(carrier.carry) === 0) {
             carrier.memory.inDeliveryMode = false;
             carrier.memory.dropOffId = null;
@@ -20,6 +23,23 @@ module.exports = {
         if (carrier.memory.inDeliveryMode) {
             carrier.deliverEnergy();
         } else {
+            // Picking up energy. Priorities:
+            // 1. If spawn/extensions are not full, fill them from containers and storage
+            // 2. Pickup stray piles of energy
+            // 3. Go hang with the miner and wait for it to provide energy
+            let pickupTarget = this.findPickupTarget(carrier);
+            if (pickupTarget) {
+                if (!carrier.pos.isNearTo(pickupTarget)) {
+                    if (carrier.fatigue === 0) {
+                        carrier.moveTo(pickupTarget);
+                    }
+                } else if (_.isFunction(pickupTarget.transfer)) {
+                    pickupTarget.transfer(carrier, RESOURCE_ENERGY);
+                }
+
+                return;
+            }
+
             var miner = this.getMiner(carrier);
             if (miner) {
                 if (!carrier.pos.isNearTo(miner)) {
@@ -35,16 +55,38 @@ module.exports = {
                         container.transfer(carrier, RESOURCE_ENERGY);
                     }
                 }
-            } else {
-                // No miners in the room, check for energy piles
-                var energyPile = Game.getObjectById(carrier.memory.energyPileId) ||
-                        carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY);
-                carrier.memory.energyPileId = energyPile ? energyPile.id : null;
-                if (energyPile && !carrier.pos.isNearTo(energyPile) && !carrier.fatigue) {
-                    carrier.moveTo(energyPile);
-                }
             }
         }
+    },
+
+    findPickupTarget: function (carrier) {
+        var energyPile = Game.getObjectById(carrier.memory.energyPileId);
+        if (energyPile) {
+            return energyPile;
+        }
+
+        var pickupTarget;
+        if (carrier.room.energyAvailable < carrier.room.energyCapacityAvailable) {
+            pickupTarget = Game.getObjectById(carrier.memory.pickupTargetId);
+            if (!pickupTarget || _.sum(pickupTarget.store) === 0) {
+                pickupTarget = _.first(_.sortBy(carrier.room.find(FIND_STRUCTURES, {
+                    filter: s => {
+                        return (s.structureType === STRUCTURE_STORAGE || s.structureType === STRUCTURE_CONTAINER) &&
+                                _.sum(s.store) > 0;
+                    }
+                }), s => 1 - _.sum(s.store) / s.storeCapacity));
+            }
+            carrier.memory.pickupTargetId = pickupTarget ? pickupTarget.id : null;
+        }
+
+        if (!pickupTarget) {
+            pickupTarget = carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
+                filter: pile => pile.amount / carrier.pos.getRangeTo(pile) > 15
+            });
+            carrier.memory.energyPileId = pickupTarget ? pickupTarget.id : null;
+        }
+
+        return pickupTarget;
     },
 
     getBody: function (energy) {
