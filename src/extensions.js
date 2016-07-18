@@ -195,6 +195,20 @@ Room.prototype.hasSurplusEnergy = function () {
 };
 
 /**
+ * @returns {boolean} True, if this object can currently attack, false otherwise.
+ */
+RoomObject.prototype.canAttack = function () {
+    return false;
+};
+
+/**
+ * @returns {boolean} True, if this object can currently heal, false otherwise
+ */
+RoomObject.prototype.canHeal = function () {
+    return false;
+};
+
+/**
  * @returns {boolean} True, if this structure can currently receive at least one unit
  * of energy, false otherwise
  */
