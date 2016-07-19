@@ -17,8 +17,8 @@ module.exports = {
 
         // Stop occupation on those rooms where the flag has been removed (manually)
         _.forEach(this.getRoomsToOccupy(), roomName => {
-            let room = Game.rooms[roomName];
-            if (room && room.find(FIND_FLAGS, {filter: flag => flag.memory.occupy}).length === 0) {
+            let flags = _.filter(Game.flags, flag => flag.pos.roomName === roomName && flag.memory.occupy === true);
+            if (_.isEmpty(flags)) {
                 console.log(`No occupation flags left in room ${roomName}, stopping occupation`);
                 this.stopOccupation(roomName);
             }
