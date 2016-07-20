@@ -21,13 +21,15 @@ module.exports = {
 
     /**
      * Returns the closest structure from the given position that isn't already at
-     * full energy capacity.
+     * full energy capacity. Prioritizes towers, then spawns and extensions, then
+     * other structures that can store energy.
      *
      * @param {RoomPosition} position The position to use as the source of the search
      * @param {String|Array} ignoreStructures One or more structure IDs to ignore in
      * the search
-     * @returns {Structure} The closest structure that can receive energy, or null
-     * if no structures in the room can currently receive energy
+     * @returns {Structure} The closest structure that can receive energy. If the room
+     * where the given position is located has no visibility, or if no structures
+     * in the room can currently receive energy, this method returns null
      */
     findClosestEnergyDropOff: function (position, ignoreStructures = []) {
         if (_.isString(ignoreStructures)) {

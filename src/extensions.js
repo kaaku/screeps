@@ -32,20 +32,54 @@ Creep.prototype.canMove = function () {
  * the structure otherwise.
  */
 Creep.prototype.deliverEnergy = function () {
-    var dropOff = Game.getObjectById(this.memory.dropOffId);
-
-    if (!dropOff || !dropOff.canReceiveEnergy()) {
-        dropOff = utils.findClosestEnergyDropOff(this.pos, this.room.memory.dropOffContainerIds);
-        this.memory.dropOffId = dropOff ? dropOff.id : null;
-    }
+    var dropOff = this.getEnergyDropOff();
 
     if (dropOff) {
         if (!this.pos.isNearTo(dropOff)) {
             this.moveTo(dropOff);
         } else {
             this.transfer(dropOff, RESOURCE_ENERGY);
+
+            if (this.fatigue === 0 && this.carry[RESOURCE_ENERGY] > dropOff.getResourceDeficiency(RESOURCE_ENERGY)) {
+                // The drop off can't receive all the energy this creep carries,
+                // so move towards the next drop off
+                dropOff = this.getEnergyDropOff(true);
+                if (dropOff) {
+                    this.moveTo(dropOff);
+                }
+            }
         }
     }
+};
+
+/**
+ * Returns a structure this creep should deliver its energy to.
+ *
+ * @param {Boolean} forceNew If true, the current drop off structure stored in memory
+ * (if any) is ignored, and a new one is acquired.
+ *
+ * @returns {null|Structure} A structure to deliver energy to, or null if no valid
+ * energy drop offs are available
+ */
+Creep.prototype.getEnergyDropOff = function (forceNew = false) {
+    var dropOff;
+    if (!forceNew) {
+        dropOff = Game.getObjectById(this.memory.dropOffId);
+    }
+
+    if (!dropOff || !dropOff.canReceiveEnergy()) {
+        let ignored = [];
+        if (_.isArray(this.room.memory.dropOffContainerIds)) {
+            Array.prototype.push.apply(ignored, this.room.memory.dropOffContainerIds);
+        }
+        if (forceNew && _.isString(this.memory.dropOffId)) {
+            ignored.push(this.memory.dropOffId);
+        }
+        dropOff = utils.findClosestEnergyDropOff(this.pos, ignored);
+        this.memory.dropOffId = dropOff ? dropOff.id : null;
+    }
+
+    return dropOff;
 };
 
 /**
@@ -225,10 +259,28 @@ Structure.prototype.canReceiveEnergy = function () {
  * of the given type, false otherwise
  */
 Structure.prototype.canReceiveResources = function (resourceType = RESOURCE_ENERGY) {
-    return (_.isObject(this.store) && _.isNumber(this.storeCapacity) &&
-            _.sum(this.store) < this.storeCapacity) || (resourceType === RESOURCE_ENERGY &&
-            _.isNumber(this.energy) && _.isNumber(this.energyCapacity) &&
-            this.energy < this.energyCapacity);
+    return (this.hasResourceStore() && _.sum(this.store) < this.storeCapacity) ||
+            (resourceType === RESOURCE_ENERGY && this.hasEnergyStore() && this.energy < this.energyCapacity);
+};
+
+/**
+ * Returns the amount of resources of the given type that can be transferred into this
+ * structure. If the structure is full, or can't store resources of the given type,
+ * returns 0.
+ *
+ * @param {String} resourceType The type of resources to check against
+ * @returns {number}
+ */
+Structure.prototype.getResourceDeficiency = function (resourceType = RESOURCE_ENERGY) {
+    if (this.hasResourceStore()) {
+        return this.storeCapacity - _.sum(this.store);
+    }
+
+    if (resourceType === RESOURCE_ENERGY && this.hasEnergyStore()) {
+        return this.energyCapacity - this.energy;
+    }
+
+    return 0;
 };
 
 /**
@@ -239,6 +291,14 @@ Structure.prototype.hasEnergy = function () {
 };
 
 /**
+ * @returns {boolean} True, if this structure can store energy, but NOT
+ * other resource types
+ */
+Structure.prototype.hasEnergyStore = function () {
+    return _.isNumber(this.energy) && _.isNumber(this.energyCapacity);
+};
+
+/**
  * @param {String} resourceType One of the RESOURCE_* constants
  * @returns {boolean} True, if this structure has resources of the given type,
  * false otherwise
@@ -246,6 +306,13 @@ Structure.prototype.hasEnergy = function () {
 Structure.prototype.hasResources = function (resourceType = RESOURCE_ENERGY) {
     return (_.isObject(this.store) && this.store[resourceType] > 0) ||
             (resourceType === RESOURCE_ENERGY && _.isNumber(this.energy) && this.energy > 0);
+};
+
+/**
+ * @returns {boolean} True, if this structure can store any resource type
+ */
+Structure.prototype.hasResourceStore = function () {
+    return _.isObject(this.store) && _.isNumber(this.storeCapacity);
 };
 
 /**
