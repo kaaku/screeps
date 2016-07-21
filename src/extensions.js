@@ -228,6 +228,10 @@ Room.prototype.hasSurplusEnergy = function () {
     return miners.length >= energySourceCount && carriers.length >= miners.length && lowestCreepTickCount > 50;
 };
 
+Room.prototype.isFriendlyOrNeutral = function () {
+    return _.isEmpty(this.controller) || this.controller.my;
+};
+
 /**
  * @returns {boolean} True, if this object can currently attack, false otherwise.
  */

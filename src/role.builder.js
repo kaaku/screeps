@@ -82,6 +82,12 @@ module.exports = {
             return pickup;
         }
 
+        if (_.isString(builder.memory.homeRoom) && builder.memory.homeRoom !== builder.room.name &&
+                builder.room.energyAvailable < builder.carryCapacity - _.sum(builder.carry)) {
+            // Go back home to fetch more resources
+            return new RoomPosition(25, 25, builder.memory.homeRoom);
+        }
+
         var structures = builder.room.find(FIND_STRUCTURES, {
             filter: structure => {
                 return structure.isFriendlyOrNeutral() && structure.hasEnergy() &&

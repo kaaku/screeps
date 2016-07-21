@@ -39,6 +39,14 @@ global.TASK_MIN_PRIO_REPAIR = 0.7;
 global.TASK_MIN_PRIO_UPGRADE = 0.1;
 
 /**
+ * A multiplier that is added to task priorities if the task is not in the
+ * same room as the creep.
+ *
+ * @type {number}
+ */
+global.TASK_PRIO_ADJACENT_ROOM_MULTIPLIER = 1.5;
+
+/**
  * Contains the maximum amount of assignees that can be assigned to a task of
  * a given type. Task types not listed in this object can have an unlimited
  * amount of assignees.
