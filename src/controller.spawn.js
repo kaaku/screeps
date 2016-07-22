@@ -36,8 +36,9 @@ module.exports = {
         if (room.energyAvailable === room.energyCapacityAvailable ||
                 ((minerCount === 0 || carrierCount === 0) && room.energyAvailable >= SPAWN_ENERGY_CAPACITY)) {
 
-            var builderCount = utils.countCreeps(room, ROLE_BUILDER),
-                    freeSource = this.findClosestFreeEnergySource(spawn);
+            let builderCount = _.filter(Game.creeps,
+                    creep => creep.memory.role === ROLE_BUILDER && creep.memory.homeRoom === room.name);
+            let freeSource = this.findClosestFreeEnergySource(spawn);
 
             if (minerCount > 0 && carrierCount > 0 &&
                     (room.find(FIND_HOSTILE_CREEPS).length > 0 || room.memory.occupationInProgress)) {
