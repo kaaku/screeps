@@ -17,12 +17,26 @@ module.exports = {
                 taskManager.stopWorkOnTask(builder.id, task);
                 delete builder.memory.task;
             }
+            if (builder.ticksToLive < CREEP_LIFE_TIME * 0.1) {
+                builder.memory.renew = true;
+            } else if (builder.memory.renew) {
+                delete builder.memory.renew
+            }
         } else if (builder.carry.energy === builder.carryCapacity) {
             builder.memory.working = true;
             delete builder.memory.pickupId;
         }
 
-        if (builder.memory.working) {
+        if (builder.memory.renew) {
+            if (builder.room.name !== builder.memory.homeRoom) {
+                builder.moveTo(new RoomPosition(25, 25, builder.memory.homeRoom));
+            } else {
+                let spawn = builder.pos.findClosestByRange(FIND_MY_SPAWNS);
+                if (!builder.pos.isNearTo(spawn)) {
+                    builder.moveTo(spawn);
+                }
+            }
+        } else if (builder.memory.working) {
             let task = builder.memory.task;
             if (_.isUndefined(task) || !taskManager.isTaskValid(task)) {
                 task = taskManager.getNewTaskFor(builder);
