@@ -34,11 +34,11 @@ module.exports = {
 
         var exits = Game.map.describeExits(creep.room.name);
         if (!_.isEmpty(exits)) {
-            let adjacentRoomNames = _.filter(exits, roomName => !_.has(Game.rooms, roomName) ||
-            (Game.rooms[roomName].isFriendlyOrNeutral()) &&
-            _.isEmpty(_.filter(Game.creeps,
-                    creep => creep.memory.role === ROLE_BUILDER && creep.memory.homeRoom === roomName
-            )));
+            let adjacentRoomNames = _.filter(exits,
+                    roomName => !_.has(Game.rooms, roomName) || (Game.rooms[roomName].isFriendlyOrNeutral()) &&
+                    _.isEmpty(_.filter(Game.creeps,
+                            creep => creep.memory.role === ROLE_BUILDER && creep.memory.homeRoom === roomName
+                    )));
             if (!_.isEmpty(adjacentRoomNames)) {
                 _.forEach(adjacentRoomNames, roomName => {
                     _.assign(tasks, this.getTasksForRoom(roomName));
@@ -198,7 +198,7 @@ module.exports = {
                 var structuresNeedingRepair = room.find(FIND_STRUCTURES, {
                     filter: structure => {
                         let targetHits = STRUCTURE_TARGET_HITS[structure.structureType] || structure.hitsMax;
-                        return structure.structureType !== STRUCTURE_TOWER && structure.hits < targetHits;
+                        return structure.structureType !== STRUCTURE_TOWER && structure.hits < targetHits * 0.9;
                     }
                 });
                 _.forEach(structuresNeedingRepair, structure => {
