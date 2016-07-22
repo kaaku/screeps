@@ -9,6 +9,10 @@ module.exports = {
 
         builder.pickupEnergyInRange();
 
+        if (builder.memory.renew && builder.ticksToLive > CREEP_LIFE_TIME * 0.5) {
+            delete builder.memory.renew;
+        }
+
         if (builder.carry.energy === 0) {
             builder.memory.working = false;
             if (_.isObject(builder.memory.task)) {
@@ -19,8 +23,6 @@ module.exports = {
             }
             if (builder.ticksToLive < CREEP_LIFE_TIME * 0.1) {
                 builder.memory.renew = true;
-            } else if (builder.memory.renew) {
-                delete builder.memory.renew
             }
         } else if (builder.carry.energy === builder.carryCapacity) {
             builder.memory.working = true;
