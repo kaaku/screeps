@@ -3,20 +3,26 @@ var _ = require('lodash');
 module.exports = {
 
     /**
-     * Returns the amount of friendly creeps with the given roles in the given room.
+     * Counts the amount of friendly creeps. The creeps that are included can
+     * be narrowed down with the parameters.
      *
-     * @param {Room} room The room of interest
+     * @param {Room} room If provided, only creeps in the given room are counted
      * @param {String|Array} roles The names of the roles the counted creeps must have,
      * or any falsy value to count all friendly creeps
      * @returns {int}
      */
-    countCreeps: function (room, roles = []) {
+    countCreeps: function (room = null, roles = []) {
         if (_.isString(roles)) {
             roles = [roles];
         }
-        return room.find(FIND_MY_CREEPS, {
-            filter: creep => _.isEmpty(roles) || _.contains(roles, creep.memory.role)
-        }).length;
+
+        if (room instanceof Room) {
+            return room.find(FIND_MY_CREEPS, {
+                filter: creep => _.isEmpty(roles) || _.contains(roles, creep.memory.role)
+            }).length;
+        } else {
+            return _.filter(Game.creeps, creep => _.isEmpty(roles) || _.contains(roles, creep.memory.role)).length;
+        }
     },
 
     /**
@@ -90,6 +96,13 @@ module.exports = {
         return room.find(FIND_HOSTILE_STRUCTURES, {
             filter: structure => structure.structureType !== STRUCTURE_CONTROLLER
         });
+    },
+
+    /**
+     * @returns {Array<Flag>}  All game flags located anywhere in the game world
+     */
+    getClaimFlags: function () {
+        return _.filter(Game.flags, flag => _.startsWith(flag.name.toLowerCase(), 'claim'));
     },
 
     /**

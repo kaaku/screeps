@@ -21,7 +21,8 @@ module.exports = {
                 return flag.memory.scoutingNeeded && !flag.memory.reserved && !Game.getObjectById(flag.memory.scoutId) && !_.contains(_.keys(Game.rooms), flag.pos.roomName);
             }));
             if (flag) {
-                console.log(`Found flag marked for scouting with name '${flag.name}' from room ${flag.pos.roomName}, creating scout`);
+                console.log(`Found flag marked for scouting with name '${flag.name}' from room ` +
+                        `${flag.pos.roomName}, creating scout`);
                 flag.memory.reserved = true;
                 delete flag.memory.scoutId;
                 this.createCreep(spawn, ROLE_SCOUT);
@@ -48,6 +49,8 @@ module.exports = {
                 }
             } else if (freeSource) {
                 this.createCreep(spawn, ROLE_MINER, {sourceId: freeSource.id});
+            } else if (utils.getClaimFlags().length > 0 && utils.countCreeps(null, ROLE_CLAIMER) === 0) {
+                this.createCreep(spawn, ROLE_CLAIMER);
             } else if (builderCount < 3) {
                 // TODO: Make target builder count dynamic
                 this.createCreep(spawn, ROLE_BUILDER, {homeRoom: room.name});

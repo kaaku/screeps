@@ -11,6 +11,14 @@ Creep.prototype.canAttack = function () {
 };
 
 /**
+ * @returns {boolean} True, if this creep can attack a controller's downgrade or
+ * reservation timer.
+ */
+Creep.prototype.canAttackController = function () {
+    return this.getActiveBodyparts(CLAIM) * CONTROLLER_CLAIM_DOWNGRADE >= 1;
+};
+
+/**
  * @returns {boolean} True, if the creep can currently heal (i.e. has functioning
  * HEAL body parts), false otherwise
  */
@@ -202,6 +210,19 @@ Creep.prototype.transferResourcesToAdjacentCreep = function (resourceType = RESO
 
         this.transfer(creepWithBiggestDeficiency, resourceType);
     }
+};
+
+/**
+ * Finds the claim flag from this room and returns it, or null if no claim
+ * flag exists in the room.
+ *
+ * @returns {null|Flag} The claim flag in the room, or null
+ */
+Room.prototype.findClaimFlag = function () {
+    var flag = _.first(this.find(FIND_FLAGS, {
+        filter: flag => _.startsWith(flag.name.toLowerCase(), 'claim')
+    }));
+    return flag ? flag : null;
 };
 
 /**
