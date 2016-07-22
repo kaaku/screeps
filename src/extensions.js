@@ -254,6 +254,15 @@ Room.prototype.isFriendlyOrNeutral = function () {
 };
 
 /**
+ * Writes the given message to the console, prepended with the room name.
+ *
+ * @param {String} message The message to log
+ */
+Room.prototype.log = function (message = '') {
+    console.log(`${this.name}: ${message}`);
+};
+
+/**
  * @returns {boolean} True, if this object can currently attack, false otherwise.
  */
 RoomObject.prototype.canAttack = function () {
@@ -345,6 +354,16 @@ Structure.prototype.hasResourceStore = function () {
  */
 Structure.prototype.isFriendlyOrNeutral = function () {
     return _.isUndefined(this.my) || this.my === true;
+};
+
+/**
+ * Writes the given message to the console, prepended with the structure name/type.
+ *
+ * @param {String} message The message to log
+ */
+Structure.prototype.log = function (message = '') {
+    var source = _.isString(this.name) ? this.name : this.structureType;
+    console.log(`${source} (${this.pos.roomName}): ${message}`);
 };
 
 /**
