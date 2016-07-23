@@ -16,7 +16,7 @@ module.exports = {
         var currentAmount = this.countStructures(room, structureType, true);
         return _.has(CONTROLLER_STRUCTURES, structureType) &&
                 _.has(CONTROLLER_STRUCTURES[structureType], roomLevel) &&
-                currentAmount <= CONTROLLER_STRUCTURES[structureType][roomLevel];
+                currentAmount < CONTROLLER_STRUCTURES[structureType][roomLevel];
     },
 
     /**
