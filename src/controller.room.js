@@ -14,6 +14,7 @@ module.exports = {
                 room.find(FIND_MY_CREEPS, {
                     filter: c => c.memory.role === ROLE_BUILDER && c.memory.homeRoom === room.name
                 }).length > 0) {
+
             if (utils.canBuildStructure(STRUCTURE_ROAD, room)) {
                 _.forEach(room.find(FIND_MY_SPAWNS), spawn => {
 
@@ -25,6 +26,14 @@ module.exports = {
 
                     this.buildRoad(spawn, room.controller);
                 });
+            }
+
+            if (utils.canBuildStructure(STRUCTURE_EXTENSION, room)) {
+                let spawn = this.getSpawnWithMostFreeSpace(room);
+
+                if (spawn) {
+                    this.buildExtensionsAroundSpawn(spawn);
+                }
             }
         }
     },
@@ -100,5 +109,104 @@ module.exports = {
             // In order to complete the road the other half needs to be built as well.
             this.buildRoad(end, start);
         }
+    },
+
+    /**
+     * Builds extensions around the given spawn in a checkerboard formation.
+     *
+     * @param {StructureSpawn} spawn The spawn that will stay in the middle of the extensions
+     * @param {int} limit Maximum amount of extensions to build. If omitted, construction
+     * sites will be added until the room limit is reached
+     */
+    buildExtensionsAroundSpawn: function (spawn, limit = -1) {
+        var missingExtensionCount = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][spawn.room.controller.level] -
+                utils.countStructures(spawn.room, STRUCTURE_EXTENSION, true);
+
+        if (missingExtensionCount < 1) {
+            return;
+        }
+
+        for (let range = 2; range < 7; range++) {
+            for (let dx = -range; dx <= range; dx += 2) {
+                for (let dy = -range; dy <= range; dy += 2) {
+                    if (missingExtensionCount === 0 || limit === 0) {
+                        // Limit hit, stop adding sites
+                        return;
+                    }
+
+                    if (Math.abs(dx) !== range && Math.abs(dy) !== range) {
+                        // Not a checkerboard position
+                        continue;
+                    }
+
+                    let pos = spawn.room.getPositionAt(spawn.pos.x + dx, spawn.pos.y + dy);
+                    if (pos.createConstructionSite(STRUCTURE_EXTENSION) === OK) {
+                        spawn.room.log(`Built extension near spawn ${spawn.name} at (${pos.x}, ${pos.y})`);
+                        missingExtensionCount--;
+                        limit--;
+                    }
+                }
+            }
+        }
+    },
+
+    /**
+     * Returns the spawn in the given room with the most free space around it. Free space
+     * means a square with no structures, construction sites or walls in it.
+     *
+     * @param {Room} room The room whose spawns to check
+     * @param {int} range The size of the area around the spawns to check
+     * @return {null|StructureSpawn} The spawn with the most free space, or null if there
+     * are no spawns in the room
+     */
+    getSpawnWithMostFreeSpace: function (room, range = 6) {
+        let spawns = room.find(FIND_MY_SPAWNS);
+
+        if (spawns.length === 1) {
+            return spawns[0];
+        } else if (spawns.length > 1) {
+            let spawn = null;
+            let maxFreeSpace;
+
+            _.forEach(spawns, s => {
+                if (spawn === null) {
+                    spawn = s;
+                    maxFreeSpace = this.countBuildableSquaresAroundPoint(s.pos, range);
+                } else {
+                    let freeSpace = this.countBuildableSquaresAroundPoint(s.pos, range);
+                    if (freeSpace > maxFreeSpace) {
+                        spawn = s;
+                        maxFreeSpace = freeSpace;
+                    }
+                }
+            });
+
+            return spawn;
+        }
+
+        return null;
+    },
+
+    /**
+     * Counts the squares around the given position that can be built on.
+     *
+     * @param {RoomPosition} pos The position to use as the center of the area
+     * @param {int} range The radius of the square area to scan
+     * @returns {number}
+     */
+    countBuildableSquaresAroundPoint: function (pos, range) {
+        var buildableSquares = 0;
+
+        for (let dx = -range; dx <= range; dx++) {
+            for (let dy = -range; dy <= range; dy++) {
+                let x = pos.x + dx, y = pos.y + dy;
+                if (x >= 0 && y >= 0 && x < 50 && y < 50 &&
+                        new RoomPosition(x, y, pos.roomName).canBeBuiltOn()) {
+                    buildableSquares++;
+                }
+            }
+        }
+
+        return buildableSquares;
     }
 };

@@ -13,8 +13,7 @@ module.exports = {
      */
     canBuildStructure: function (structureType, room) {
         var roomLevel = (room.controller ? room.controller.level : 0) + '';
-        var currentAmount = room.find(FIND_STRUCTURES, {filter: s => s.structureType === structureType}).length +
-                room.find(FIND_CONSTRUCTION_SITES, {filter: s => s.structureType === structureType}).length;
+        var currentAmount = this.countStructures(room, structureType, true);
         return _.has(CONTROLLER_STRUCTURES, structureType) &&
                 _.has(CONTROLLER_STRUCTURES[structureType], roomLevel) &&
                 currentAmount <= CONTROLLER_STRUCTURES[structureType][roomLevel];
@@ -41,6 +40,23 @@ module.exports = {
         } else {
             return _.filter(Game.creeps, creep => _.isEmpty(roles) || _.contains(roles, creep.memory.role)).length;
         }
+    },
+
+    /**
+     * Counts the amount of structures (and possibly construction sites) of the given type
+     * in the given room.
+     *
+     * @param {Room} room The room whose structures to count
+     * @param {String} structureType One of the STRUCTURE_* constants
+     * @param {Boolean} includeConstructionSites Whether to include construction sites or not
+     * @returns {int}
+     */
+    countStructures: function (room, structureType, includeConstructionSites = false) {
+        var count = room.find(FIND_STRUCTURES, {filter: s => s.structureType === structureType}).length;
+        if (includeConstructionSites) {
+            count += room.find(FIND_CONSTRUCTION_SITES, {filter: s => s.structureType === structureType}).length;
+        }
+        return count;
     },
 
     /**

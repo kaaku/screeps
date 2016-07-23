@@ -277,6 +277,28 @@ RoomObject.prototype.canHeal = function () {
 };
 
 /**
+ * Determines if this position has a structure of the given type.
+ *
+ * @param {String} structureType One of the STRUCTURE_* constants
+ * @param {Boolean} includeConstructionSites Whether to check for construction sites as well
+ * @returns {boolean}
+ */
+RoomPosition.prototype.hasStructure = function (structureType, includeConstructionSites = true) {
+    return !_.isEmpty(_.filter(this.lookFor(LOOK_STRUCTURES), s => s.structureType === structureType)) ||
+            includeConstructionSites && !_.isEmpty(_.filter(this.lookFor(LOOK_CONSTRUCTION_SITES), s => s.structureType === structureType));
+};
+
+/**
+ * @return {Boolean} True, if structures can be built on this square, false otherwise.
+ * Note that some structures can be built on roads; this method does not handle those cases.
+ */
+RoomPosition.prototype.canBeBuiltOn = function () {
+    return _.isEmpty(this.lookFor(LOOK_STRUCTURES)) &&
+            _.isEmpty(this.lookFor(LOOK_CONSTRUCTION_SITES)) &&
+            this.lookFor(LOOK_TERRAIN)[0] !== 'wall';
+};
+
+/**
  * @returns {boolean} True, if this structure can currently receive at least one unit
  * of energy, false otherwise
  */
