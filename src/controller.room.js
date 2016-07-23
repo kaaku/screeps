@@ -82,10 +82,7 @@ module.exports = {
             return;
         }
 
-        var path = start.pos.findPathTo(end.pos, {
-            ignoreCreeps: true,
-            ignoreRoads: true
-        });
+        var path = start.pos.findPathTo(end.pos, {ignoreCreeps: true});
 
         if (_.keys(Game.constructionSites).length + path.length > MAX_CONSTRUCTION_SITES) {
             console.log(`Can't build road between ${start.pos} and ${end.pos}, too many construction sites`);
