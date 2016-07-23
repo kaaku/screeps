@@ -49,6 +49,8 @@ module.exports = {
             return;
         }
 
+        spawn.room.log(`Building road around spawn ${spawn.name}`);
+
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
                 if (dx !== 0 || dy !== 0) {
@@ -57,7 +59,6 @@ module.exports = {
                     if (_.isEmpty(pos.lookFor(LOOK_CONSTRUCTION_SITES)) &&
                             _.isEmpty(_.filter(pos.lookFor(LOOK_STRUCTURES),
                                     s => s.structureType === STRUCTURE_ROAD))) {
-                        spawn.room.log(`Building road around spawn ${spawn.name} at (${x}, ${y})`);
                         pos.createConstructionSite(STRUCTURE_ROAD);
                     }
                 }
@@ -89,12 +90,14 @@ module.exports = {
             return;
         }
 
+        let startX = start.pos.x, startY = start.pos.y, endX = _.last(path).x, endY = _.last(path).y;
+        console.log(`${start.pos.roomName}: Building road from (${startX}, ${startY}) to (${endX}, ${endY})`);
+
         _.forEach(path, step => {
             let pos = new RoomPosition(step.x, step.y, start.pos.roomName);
             if (_.isEmpty(pos.lookFor(LOOK_CONSTRUCTION_SITES)) &&
                     _.isEmpty(_.filter(pos.lookFor(LOOK_STRUCTURES),
                             s => s.structureType === STRUCTURE_ROAD))) {
-                console.log(`${start.pos.roomName}: Building road at (${step.x}, ${step.y})`);
                 pos.createConstructionSite(STRUCTURE_ROAD);
             }
         });
