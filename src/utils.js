@@ -3,6 +3,24 @@ var _ = require('lodash');
 module.exports = {
 
     /**
+     * Determines whether a structure of the given type can be built in the given room
+     * based on the structure type limitations tied to the room's controller level.
+     *
+     * @param {String} structureType One of the STRUCTURE_* constants
+     * @param {Room} room The room where the check should be made
+     * @returns {boolean} True, if structures of the given type can still legally
+     * be built in the given room, false otherwise
+     */
+    canBuildStructure: function (structureType, room) {
+        var roomLevel = (room.controller ? room.controller.level : 0) + '';
+        var currentAmount = room.find(FIND_STRUCTURES, {filter: s => s.structureType === structureType}).length +
+                room.find(FIND_CONSTRUCTION_SITES, {filter: s => s.structureType === structureType}).length;
+        return _.has(CONTROLLER_STRUCTURES, structureType) &&
+                _.has(CONTROLLER_STRUCTURES[structureType], roomLevel) &&
+                currentAmount <= CONTROLLER_STRUCTURES[structureType][roomLevel];
+    },
+
+    /**
      * Counts the amount of friendly creeps. The creeps that are included can
      * be narrowed down with the parameters.
      *

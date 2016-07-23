@@ -13,7 +13,12 @@ module.exports.loop = function () {
 
     armyManager.run();
 
-    _.forEach(utils.getMyRooms(), room => roomController.run(room));
+    _.forEach(utils.getMyRooms(), room => {
+        if (_.isUndefined(room.memory.paths)) {
+            room.memory.paths = {};
+        }
+        roomController.run(room)
+    });
 
     _.forEach(Game.spawns, function (spawn) {
         spawnController.run(spawn);
