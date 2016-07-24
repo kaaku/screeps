@@ -32,7 +32,7 @@ module.exports = {
                 let spawn = this.getSpawnWithMostFreeSpace(room);
 
                 if (spawn) {
-                    this.buildExtensionsAroundSpawn(spawn);
+                    this.buildExtensionsAndRoadsAroundSpawn(spawn);
                 }
             }
         }
@@ -116,7 +116,7 @@ module.exports = {
      *
      * @param {StructureSpawn} spawn The spawn that will stay in the middle of the extensions
      */
-    buildExtensionsAroundSpawn: function (spawn) {
+    buildExtensionsAndRoadsAroundSpawn: function (spawn) {
         var missingExtensionCount = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][spawn.room.controller.level] -
                 utils.countStructures(spawn.room, STRUCTURE_EXTENSION, true);
         var siteCount = _.keys(Game.constructionSites).length;
@@ -124,6 +124,8 @@ module.exports = {
         if (missingExtensionCount < 1 && siteCount >= MAX_CONSTRUCTION_SITES) {
             return;
         }
+
+        // TODO: Build roads one range further than extensions pre-emptively
 
         for (let range = 2; range <= 7; range++) {
             for (let r of [-range, range]) {
