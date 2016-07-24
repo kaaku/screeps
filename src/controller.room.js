@@ -115,35 +115,38 @@ module.exports = {
      * Builds extensions around the given spawn in a checkerboard formation.
      *
      * @param {StructureSpawn} spawn The spawn that will stay in the middle of the extensions
-     * @param {int} limit Maximum amount of extensions to build. If omitted, construction
-     * sites will be added until the room limit is reached
      */
-    buildExtensionsAroundSpawn: function (spawn, limit = -1) {
+    buildExtensionsAroundSpawn: function (spawn) {
         var missingExtensionCount = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][spawn.room.controller.level] -
                 utils.countStructures(spawn.room, STRUCTURE_EXTENSION, true);
+        var siteCount = _.keys(Game.constructionSites).length;
 
-        if (missingExtensionCount < 1) {
+        if (missingExtensionCount < 1 && siteCount >= MAX_CONSTRUCTION_SITES) {
             return;
         }
 
-        for (let range = 2; range < 7; range++) {
-            for (let dx = -range; dx <= range; dx += 2) {
-                for (let dy = -range; dy <= range; dy += 2) {
-                    if (missingExtensionCount === 0 || limit === 0) {
-                        // Limit hit, stop adding sites
-                        return;
-                    }
+        for (let range = 2; range <= 7; range++) {
+            for (let r of [-range, range]) {
+                for (let i = -range; i <= range; i++) {
+                    // When the oddity of the dx and dy (i.e. r and i) are equal, the resulting
+                    // point (x + dx, y + dy) aligns diagonally with the spawn -> extension spot
+                    let structureType = Math.abs(r) % 2 === Math.abs(i) % 2 ? STRUCTURE_EXTENSION : STRUCTURE_ROAD;
+                    let x1 = spawn.pos.x + r, y1 = spawn.pos.y + i,
+                            x2 = spawn.pos.x + i, y2 = spawn.pos.y + r;
 
-                    if (Math.abs(dx) !== range && Math.abs(dy) !== range) {
-                        // Not a checkerboard position
-                        continue;
-                    }
+                    for (let pair of [{x: x1, y: y1}, {x: x2, y: y2}]) {
+                        if (this.buildStructure(pair.x, pair.y, spawn.room, structureType)) {
+                            spawn.room.log(`Built ${structureType} near spawn ${spawn.name} at (${pair.x}, ${pair.y})`);
+                            if (structureType === STRUCTURE_EXTENSION) {
+                                missingExtensionCount--;
+                                siteCount++;
+                            }
 
-                    let pos = spawn.room.getPositionAt(spawn.pos.x + dx, spawn.pos.y + dy);
-                    if (pos.createConstructionSite(STRUCTURE_EXTENSION) === OK) {
-                        spawn.room.log(`Built extension near spawn ${spawn.name} at (${pos.x}, ${pos.y})`);
-                        missingExtensionCount--;
-                        limit--;
+                            if (missingExtensionCount === 0 || siteCount === MAX_CONSTRUCTION_SITES) {
+                                // Limit hit, stop adding sites
+                                return;
+                            }
+                        }
                     }
                 }
             }
@@ -208,5 +211,25 @@ module.exports = {
         }
 
         return buildableSquares;
+    },
+
+    /**
+     * Attempts to create a construction site at the given location.
+     *
+     * @param {int} x The x coordinate
+     * @param {int} y The y coordinate
+     * @param {Room} room The room to put the site in
+     * @param {String} structureType One of the STRUCTURE_* constants
+     * @returns {boolean} True, if the site was created successfully, false otherwise
+     */
+    buildStructure(x, y, room, structureType) {
+        if (x >= 0 && x < 50 && y >= 0 && y < 50) {
+            let pos = room.getPositionAt(x, y);
+            if (pos.canBeBuiltOn() && pos.createConstructionSite(structureType) === OK) {
+                return true;
+            }
+        }
+
+        return false;
     }
 };
