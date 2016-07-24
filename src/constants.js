@@ -1,3 +1,10 @@
+/**
+ * The interval to use for garbage collection.
+ *
+ * @type {number}
+ */
+global.GC_INTERVAL = 100;
+
 global.ROLE_MINER = 'miner';
 global.ROLE_CARRIER = 'carrier';
 global.ROLE_BUILDER = 'builder';
