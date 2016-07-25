@@ -128,8 +128,7 @@ module.exports = {
         }
 
         if (task.type === TASK_REPAIR && target instanceof Structure) {
-            let targetHits = STRUCTURE_TARGET_HITS[target.structureType] || target.hitsMax;
-            return target.hits < targetHits && target.hits < target.hitsMax;
+            return target.hits < target.getTargetHits();
         }
 
         if (task.type === TASK_DELIVER_ENERGY && target instanceof StructureTower) {
@@ -197,14 +196,13 @@ module.exports = {
 
                 var structuresNeedingRepair = room.find(FIND_STRUCTURES, {
                     filter: structure => {
-                        let targetHits = STRUCTURE_TARGET_HITS[structure.structureType] || structure.hitsMax;
-                        return structure.structureType !== STRUCTURE_TOWER && structure.hits < targetHits * 0.9;
+                        return structure.structureType !== STRUCTURE_TOWER &&
+                                structure.hits < structure.getTargetHits() * 0.9;
                     }
                 });
                 _.forEach(structuresNeedingRepair, structure => {
                     // The priority of repair tasks is inversely proportional to remaining hits.
-                    let targetHits = STRUCTURE_TARGET_HITS[structure.structureType] || structure.hitsMax;
-                    let priority = structure.hits / _.min([targetHits, structure.hitsMax]) + TASK_MIN_PRIO_REPAIR;
+                    let priority = structure.hits / structure.getTargetHits() + TASK_MIN_PRIO_REPAIR;
 
                     tasks[structure.id] = this.updateOldTaskOrCreateNew(oldTasks, TASK_REPAIR,
                             roomName, structure.id, priority);

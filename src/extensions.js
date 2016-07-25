@@ -366,6 +366,18 @@ Structure.prototype.getResourceDeficiency = function (resourceType = RESOURCE_EN
 };
 
 /**
+ * @return {int} The amount of hit points this structure should be repaired to.
+ */
+Structure.prototype.getTargetHits = function () {
+    var room = this.room;
+    if (_.isUndefined(room) || _.isUndefined(room.controller) || !room.controller.my || !_.has(STRUCTURE_TARGET_HITS, this.structureType) || !_.has(STRUCTURE_TARGET_HITS[this.structureType], room.controller.level + '')) {
+        return this.hitsMax;
+    }
+
+    return STRUCTURE_TARGET_HITS[this.structureType][room.controller.level];
+};
+
+/**
  * @return {boolean} True, if this structure has energy, false otherwise
  */
 Structure.prototype.hasEnergy = function () {

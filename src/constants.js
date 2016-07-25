@@ -31,8 +31,28 @@ global.ROLES = {
  * @type {{String, Number}}
  */
 global.STRUCTURE_TARGET_HITS = {
-    [STRUCTURE_WALL]: 1000000,
-    [STRUCTURE_RAMPART]: 2000000
+    [STRUCTURE_WALL]: {
+        0: 1,
+        1: 1000,
+        2: 10000,
+        3: 50000,
+        4: 100000,
+        5: 200000,
+        6: 500000,
+        7: 1000000,
+        8: 5000000
+    },
+    [STRUCTURE_RAMPART]: {
+        0: 1,
+        1: 1,
+        2: 10000,
+        3: 50000,
+        4: 100000,
+        5: 200000,
+        6: 500000,
+        7: 1000000,
+        8: 5000000
+    }
 };
 
 global.TASK_BUILD = 'build';
