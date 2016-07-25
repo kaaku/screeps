@@ -141,8 +141,9 @@ module.exports = {
                             spawn.room.log(`Built ${structureType} near spawn ${spawn.name} at (${pair.x}, ${pair.y})`);
                             if (structureType === STRUCTURE_EXTENSION) {
                                 missingExtensionCount--;
-                                siteCount++;
                             }
+
+                            siteCount++;
 
                             if (missingExtensionCount === 0 || siteCount === MAX_CONSTRUCTION_SITES) {
                                 // Limit hit, stop adding sites
