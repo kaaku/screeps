@@ -213,6 +213,13 @@ Creep.prototype.transferResourcesToAdjacentCreep = function (resourceType = RESO
 };
 
 /**
+ * @returns {boolean} True, if this is an energy pile, false otherwise
+ */
+Resource.prototype.hasEnergy = function () {
+    return this.resourceType === RESOURCE_ENERGY && this.amount > 0;
+};
+
+/**
  * Finds the claim flag from this room and returns it, or null if no claim
  * flag exists in the room.
  *

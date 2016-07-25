@@ -98,26 +98,31 @@ module.exports = {
             return pickup;
         }
 
-        if (_.isString(builder.memory.homeRoom) && builder.memory.homeRoom !== builder.room.name &&
-                builder.room.energyAvailable < builder.carryCapacity - _.sum(builder.carry)) {
-            // Go back home to fetch more resources
-            return new RoomPosition(25, 25, builder.memory.homeRoom);
-        }
-
-        var structures = builder.room.find(FIND_STRUCTURES, {
-            filter: structure => {
-                return structure.isFriendlyOrNeutral() && structure.hasEnergy() &&
-                        structure.structureType !== STRUCTURE_TOWER;
-            }
-        });
-
-        var storagesAndContainers = _.filter(structures, s => {
-            return s.structureType === STRUCTURE_STORAGE || s.structureType === STRUCTURE_CONTAINER;
-        });
-        if (!_.isEmpty(storagesAndContainers)) {
-            pickup = builder.pos.findClosestByRange(storagesAndContainers);
+        var energyPiles = builder.pos.findInRange(FIND_DROPPED_ENERGY, 4, {filter: pile => pile.hasEnergy()});
+        if (!_.isEmpty(energyPiles)) {
+            pickup = builder.pos.findClosestByRange(energyPiles);
         } else {
-            pickup = builder.pos.findClosestByRange(structures);
+            if (_.isString(builder.memory.homeRoom) && builder.memory.homeRoom !== builder.room.name &&
+                    builder.room.energyAvailable < builder.carryCapacity - _.sum(builder.carry)) {
+                // Go back home to fetch more resources
+                return new RoomPosition(25, 25, builder.memory.homeRoom);
+            }
+
+            var structures = builder.room.find(FIND_STRUCTURES, {
+                filter: structure => {
+                    return structure.isFriendlyOrNeutral() && structure.hasEnergy() &&
+                            structure.structureType !== STRUCTURE_TOWER;
+                }
+            });
+
+            var storagesAndContainers = _.filter(structures, s => {
+                return s.structureType === STRUCTURE_STORAGE || s.structureType === STRUCTURE_CONTAINER;
+            });
+            if (!_.isEmpty(storagesAndContainers)) {
+                pickup = builder.pos.findClosestByRange(storagesAndContainers);
+            } else {
+                pickup = builder.pos.findClosestByRange(structures);
+            }
         }
 
         if (pickup) {
