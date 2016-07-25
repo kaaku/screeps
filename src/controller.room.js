@@ -121,7 +121,7 @@ module.exports = {
                 utils.countStructures(spawn.room, STRUCTURE_EXTENSION, true);
         var siteCount = _.keys(Game.constructionSites).length;
 
-        if (missingExtensionCount < 1 && siteCount >= MAX_CONSTRUCTION_SITES) {
+        if (missingExtensionCount < 1 || siteCount >= MAX_CONSTRUCTION_SITES) {
             return;
         }
 
