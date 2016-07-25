@@ -64,7 +64,7 @@ module.exports = {
         if (room.energyAvailable > room.energyCapacityAvailable / 2 && room.hasSurplusEnergy()) {
             // Check if there are some old creeps nearby that could be healed
             var adjacentOldCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1, {
-                filter: creep => creep.ticksToLive < CREEP_LIFE_TIME * 0.8
+                filter: creep => creep.ticksToLive < CREEP_LIFE_TIME * 0.8 && !creep.isObsolete()
             });
             var oldestCreep = _.first(_.sortBy(adjacentOldCreeps, 'ticksToLive'));
             if (oldestCreep) {

@@ -138,6 +138,25 @@ Creep.prototype.getRallyPoint = function () {
 };
 
 /**
+ * Determines if this creep is obsolete or not. If a creep with the same role would be
+ * built now and have a bigger body than this creep, then this creep is considered
+ * to be obsolete.
+ *
+ * Note that this check is bound to the room the creep is currently in. This shouldn't
+ * be a problem, though, as most creeps don't travel to other rooms, and those that do
+ * don't hang out at spawns waiting to be renewed.
+ *
+ * @returns {boolean} True, if this creep is obsolete, false otherwise.
+ */
+Creep.prototype.isObsolete = function () {
+    var originalBuildCost = _.reduce(this.body, (sum, part) => sum + BODYPART_COST[part.type], 0);
+    var newCreepBuildCost = _.reduce(ROLES[this.memory.role].getBody(this.room.energyCapacityAvailable),
+            (sum, part) => sum + BODYPART_COST[part], 0);
+
+    return originalBuildCost < newCreepBuildCost;
+};
+
+/**
  * Writes the given message to the log, together with the creeps name and role
  */
 Creep.prototype.log = function (message) {

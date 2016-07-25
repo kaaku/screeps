@@ -21,7 +21,7 @@ module.exports = {
                 taskManager.stopWorkOnTask(builder.id, task);
                 delete builder.memory.task;
             }
-            if (builder.ticksToLive < CREEP_LIFE_TIME * 0.1) {
+            if (builder.ticksToLive < CREEP_LIFE_TIME * 0.1 && !builder.isObsolete()) {
                 builder.memory.renew = true;
             }
         } else if (builder.carry.energy === builder.carryCapacity) {
