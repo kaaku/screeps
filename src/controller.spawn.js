@@ -54,7 +54,7 @@ module.exports = {
                 this.createCreep(spawn, ROLE_MINER, {sourceId: freeSource.id});
             } else if (_.isString(claimTarget)) {
                 this.createCreep(spawn, ROLE_CLAIMER, {targetRoomName: claimTarget});
-            } else if (builderCount < 3) {
+            } else if (builderCount < 2) {
                 // TODO: Make target builder count dynamic
                 this.createCreep(spawn, ROLE_BUILDER, {homeRoom: room.name});
             } else if (utils.countCreeps(room, [ROLE_SOLDIER_MELEE, ROLE_SOLDIER_MEDIC]) < 2) {
