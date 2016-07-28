@@ -40,6 +40,8 @@ module.exports = {
                     creep => creep.memory.role === ROLE_BUILDER && creep.memory.homeRoom === room.name).length;
             let freeSource = this.findClosestFreeEnergySource(spawn);
 
+            let claimTarget = room.getNextClaimTarget();
+
             if (minerCount > 0 && carrierCount > 0 &&
                     (room.find(FIND_HOSTILE_CREEPS).length > 0 || room.memory.occupationInProgress)) {
                 this.createFightingCreep(spawn);
@@ -50,8 +52,8 @@ module.exports = {
                 }
             } else if (freeSource) {
                 this.createCreep(spawn, ROLE_MINER, {sourceId: freeSource.id});
-            } else if (utils.getClaimFlags().length > 0 && utils.countCreeps(null, ROLE_CLAIMER) === 0) {
-                this.createCreep(spawn, ROLE_CLAIMER);
+            } else if (_.isString(claimTarget)) {
+                this.createCreep(spawn, ROLE_CLAIMER, {targetRoomName: claimTarget});
             } else if (builderCount < 3) {
                 // TODO: Make target builder count dynamic
                 this.createCreep(spawn, ROLE_BUILDER, {homeRoom: room.name});

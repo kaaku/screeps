@@ -239,6 +239,53 @@ Resource.prototype.hasEnergy = function () {
 };
 
 /**
+ * Registers the given room as a claim target for this room, meaning that a spawn in this
+ * room should build a claimer creep and send it to claim the given room.
+ *
+ * @param {String} roomName The name of the room to claim
+ */
+Room.prototype.addClaimTarget = function (roomName) {
+    var claimTargets = this.memory.claimTargets || [];
+    let room = Game.rooms[roomName];
+    if (!_.contains(claimTargets, roomName) && (_.isUndefined(room) || !room.isFriendly())) {
+        this.log(`Registered new claim target: ${roomName}`);
+        claimTargets.push(roomName);
+    }
+    this.memory.claimTargets = claimTargets;
+};
+
+/**
+ * Returns the name of the room that should be claimed next. A room can have multiple
+ * claim targets, which are processed one by one. In these cases, this method returns
+ * the first room with no claimers assigned to it at the moment.
+ *
+ * @returns {null|String} The name of the next room to claim, or null if there are
+ * no rooms in the queue.
+ */
+Room.prototype.getNextClaimTarget = function () {
+    if (!_.isEmpty(this.memory.claimTargets)) {
+        // Remove obsolete claim targets from memory
+        let allClaimTargets = _.map(utils.getClaimFlags(), 'pos.roomName');
+        let myRooms = _.map(utils.getMyRooms(), 'name');
+        let obsoleteTargets = _.remove(this.memory.claimTargets,
+                target => !_.contains(allClaimTargets, target) || _.contains(myRooms, target));
+        if (!_.isEmpty(obsoleteTargets)) {
+            this.log(`Removed obsolete claim target(s): ${obsoleteTargets}`);
+        }
+    }
+
+    if (!_.isEmpty(this.memory.claimTargets)) {
+        for (let target of this.memory.claimTargets) {
+            if (utils.countCreeps(null, ROLE_CLAIMER, c => c.memory.targetRoomName === target) === 0) {
+                return target;
+            }
+        }
+    }
+
+    return null;
+};
+
+/**
  * Finds the claim flag from this room and returns it, or null if no claim
  * flag exists in the room.
  *
@@ -275,6 +322,18 @@ Room.prototype.hasSurplusEnergy = function () {
     return miners.length >= energySourceCount && carriers.length >= miners.length && lowestCreepTickCount > 50;
 };
 
+/**
+ * @returns {boolean} True, if this room is friendly, i.e. has a controller that is
+ * owned by me.
+ */
+Room.prototype.isFriendly = function () {
+    return _.has(this, 'controller') && this.controller.my === true;
+};
+
+/**
+ * @returns {boolean} True, if this room is friendly or neutral. Reserved rooms are
+ * considered to be neutral.
+ */
 Room.prototype.isFriendlyOrNeutral = function () {
     return _.isEmpty(this.controller) || this.controller.my;
 };

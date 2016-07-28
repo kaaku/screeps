@@ -11,8 +11,14 @@ module.exports = {
         }
 
         if (claimer.room.name !== roomName) {
-            // Move to an arbitrary point in the room until the creep reaches the room
-            claimer.moveTo(new RoomPosition(25, 25, roomName));
+            let claimFlags = _.filter(utils.getClaimFlags(), flag => flag.pos.roomName === roomName);
+            if (!_.isEmpty(claimFlags)) {
+                claimer.moveTo(claimFlags[0]);
+            } else {
+                // Claim flag not found for some reason, move to an arbitrary point
+                // in the room until the creep reaches the room
+                claimer.moveTo(new RoomPosition(25, 25, roomName));
+            }
         } else {
             let controller = claimer.room.controller;
             if (!controller) {
@@ -22,26 +28,21 @@ module.exports = {
 
             if (claimer.pos.isNearTo(controller)) {
                 if (controller.level === 0) {
-                    // Neutral controller, either claim or reserve it
+                    // Neutral controller
                     let reservedBy = _.isObject(controller.reservation) ? controller.reservation.username : null;
 
-                    if (utils.getMyRooms().length < Game.gcl.level &&
-                            (reservedBy === null || reservedBy === claimer.owner.username)) {
-                        claimer.log(`Claiming controller in room ${roomName}`);
-                        claimer.claimController(controller);
-                        let claimFlag = claimer.room.findClaimFlag();
-                        if (claimFlag) {
-                            // The controller is now taken, and the flag is unnecessary
-                            claimFlag.remove();
-                        }
-                    } else if (_.isObject(controller.reservation)) {
-                        if (controller.reservation.username === claimer.owner.username) {
+                    if (reservedBy === null || reservedBy === claimer.owner.username) {
+                        if (utils.getMyRooms().length < Game.gcl.level) {
+                            claimer.log(`Claiming controller in room ${roomName}`);
+                            claimer.claimController(controller);
+                        } else {
                             // Reserved by me, keep on adding to the timer
                             claimer.reserveController(controller);
-                        } else if (claimer.canAttackController()) {
-                            // Reserved by someone else, attack the timer
-                            claimer.attackController(controller);
                         }
+                    } else if (reservedBy !== null && reservedBy !== claimer.owner.username &&
+                            claimer.canAttackController()) {
+                        // Reserved by someone else, attack the timer
+                        claimer.attackController(controller);
                     }
                 } else if (!controller.my && claimer.canAttackController()) {
                     // The controller is owned by someone else

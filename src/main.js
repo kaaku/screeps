@@ -19,6 +19,8 @@ module.exports = {
 
         armyManager.run();
 
+        this.handleClaimFlags();
+
         _.forEach(utils.getMyRooms(), room => {
             if (_.isUndefined(room.memory.paths)) {
                 room.memory.paths = {};
@@ -64,6 +66,39 @@ module.exports = {
             if (Game.getObjectById(id) === null) {
                 console.log(`GC: Deleting memory of structure ${id}`);
                 delete Memory.structures[id];
+            }
+        });
+    },
+
+    /**
+     * Deletes obsolete claim flags, and assigns unassigned claim flags to the appropriate
+     * rooms, so that rooms with most energy capacity take care of nearby claim targets.
+     */
+    handleClaimFlags: function () {
+        _.forEach(utils.getClaimFlags(), flag => {
+            if (flag.room && flag.room.isFriendly()) {
+                console.log(`Removing claim flag '${flag.name}, as the room is already claimed'`);
+                flag.remove();
+            } else if (_.isUndefined(flag.memory.responsibleRoom)) {
+                let linkedRooms = utils.getLinkedRooms(flag.pos.roomName, 3);
+                let responsibleRoom = null, maxEnergyCapacity = 0, distance = 10;
+
+                _.forEach(linkedRooms, (roomInfo, roomName) => {
+                    let room = Game.rooms[roomName];
+                    if (!_.isUndefined(room) && room.isFriendly && (responsibleRoom === null ||
+                            room.energyCapacityAvailable > maxEnergyCapacity ||
+                            (room.energyCapacityAvailable === maxEnergyCapacity &&
+                            roomInfo.distance < distance))) {
+                        responsibleRoom = room;
+                        maxEnergyCapacity = room.energyCapacityAvailable;
+                        distance = roomInfo.distance;
+                    }
+                });
+
+                if (responsibleRoom) {
+                    responsibleRoom.addClaimTarget(flag.pos.roomName);
+                    flag.memory.responsibleRoom = responsibleRoom.name;
+                }
             }
         });
     }

@@ -26,19 +26,25 @@ module.exports = {
      * @param {Room} room If provided, only creeps in the given room are counted
      * @param {String|Array} roles The names of the roles the counted creeps must have,
      * or any falsy value to count all friendly creeps
+     * @param {Function} predicate An additional filter that will be applied to the
+     * search results. The function will receive a single creep as a parameter. The
+     * creeps the predicate returns truthy for will be kept.
      * @returns {int}
      */
-    countCreeps: function (room = null, roles = []) {
+    countCreeps: function (room = null, roles = [], predicate = null) {
         if (_.isString(roles)) {
             roles = [roles];
         }
 
+        let filter = function (creep) {
+            return (_.isEmpty(roles) || _.contains(roles, creep.memory.role)) &&
+                    (!_.isFunction(predicate) || predicate(creep));
+        };
+
         if (room instanceof Room) {
-            return room.find(FIND_MY_CREEPS, {
-                filter: creep => _.isEmpty(roles) || _.contains(roles, creep.memory.role)
-            }).length;
+            return room.find(FIND_MY_CREEPS, {filter: filter}).length;
         } else {
-            return _.filter(Game.creeps, creep => _.isEmpty(roles) || _.contains(roles, creep.memory.role)).length;
+            return _.filter(Game.creeps, filter).length;
         }
     },
 
@@ -133,6 +139,52 @@ module.exports = {
     },
 
     /**
+     * Returns the names of the rooms that are "linked" (i.e. have exits) to the
+     * given room. The depth parameter can be used to define how far to travel
+     * from the given room. E.g. if depth is 3, this method will return all
+     * rooms that can be traveled to from the source room by going through
+     * a maximum of 2 other rooms.
+     *
+     * Example return value:
+     *
+     * {
+     *      'E1N1': {distance: 1},
+     *      'E1N2': {distance: 2}
+     * }
+     *
+     * @param {String} roomName The name of the source room
+     * @param {int} depth How far to travel from the source room
+     * @returns {Object} An object with the room names as keys, and objects
+     * with the distance information as values
+     */
+    getLinkedRooms: function (roomName, depth = 1) {
+        if (!_.isString(roomName) || !_.isNumber(depth)) {
+            return [];
+        }
+
+        var linkedRooms = {};
+        var roomsFromPreviousStep = [roomName];
+
+        for (let i = 1; i <= depth; i++) {
+            let newLinkedRooms = [];
+            for (let room of roomsFromPreviousStep) {
+                let exits = Game.map.describeExits(room);
+                if (!_.isEmpty(exits)) {
+                    newLinkedRooms = newLinkedRooms.concat(_.values(exits));
+                }
+            }
+            _.forEach(newLinkedRooms, linkedRoom => {
+                if (linkedRoom !== roomName && !_.has(linkedRooms, linkedRoom)) {
+                    linkedRooms[linkedRoom] = {distance: i};
+                }
+            });
+            roomsFromPreviousStep = newLinkedRooms;
+        }
+
+        return linkedRooms;
+    },
+
+    /**
      * @returns {Array<Flag>}  All game flags located anywhere in the game world
      */
     getClaimFlags: function () {
@@ -143,7 +195,7 @@ module.exports = {
      * @returns {Array<Room>} Returns an array of rooms that have a friendly controller in them
      */
     getMyRooms: function () {
-        return _.filter(Game.rooms, room => !_.isUndefined(room.controller) && room.controller.my);
+        return _.filter(Game.rooms, room => room.isFriendly());
     },
 
     /**
