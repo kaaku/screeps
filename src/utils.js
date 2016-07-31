@@ -199,6 +199,16 @@ module.exports = {
     },
 
     /**
+     * @param {String} structureType One of the STRUCTURE_* constants
+     * @returns {boolean} True, if the given structure type is neutral, false if it's
+     * an owned structure type (or not a structure type at all)
+     */
+    isNeutralStructureType: function (structureType) {
+        return _.isString(structureType) &&
+                _.contains([STRUCTURE_CONTAINER, STRUCTURE_PORTAL, STRUCTURE_ROAD, STRUCTURE_WALL], structureType);
+    },
+
+    /**
      * De-serializes a room position object from memory into a RoomPosition object
      *
      * @param {Object} memoryObject The memory object containing the serialized position

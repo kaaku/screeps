@@ -384,6 +384,36 @@ RoomPosition.prototype.canBeBuiltOn = function () {
 };
 
 /**
+ * Counts the amount of structures of the given type in the specified range around this position.
+ * Only counts neutral and friendly structures, not hostiles.
+ *
+ * @param {String} structureType One of the STRUCTURE_* constants
+ * @param {int} range The range to look in
+ * @param {boolean} includeConstructionSites Whether to also count construction sites
+ * of the given type or not
+ * @returns {int} The amount of structures (and possibly construction sites) found,
+ * or -1 if the arguments were invalid
+ */
+RoomPosition.prototype.countStructuresInRange = function (structureType, range = 1,
+                                                          includeConstructionSites = false) {
+    if (!(_.isString(structureType) && _.isNumber(range) && _.isBoolean(includeConstructionSites) &&
+            _.has(CONTROLLER_STRUCTURES, structureType) && range > 0)) {
+        return -1;
+    }
+
+    var isNeutralStructureType = utils.isNeutralStructureType(structureType);
+    var findType = isNeutralStructureType ? FIND_STRUCTURES : FIND_MY_STRUCTURES;
+    var amount = this.findInRange(findType, range, {filter: s => s.structureType === structureType}).length;
+
+    if (includeConstructionSites) {
+        findType = isNeutralStructureType ? FIND_CONSTRUCTION_SITES : FIND_MY_CONSTRUCTION_SITES;
+        amount += this.findInRange(findType, range, {filter: s => s.structureType === structureType}).length;
+    }
+
+    return amount;
+};
+
+/**
  * @returns {boolean} True, if this structure can currently receive at least one unit
  * of energy, false otherwise
  */

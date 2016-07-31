@@ -28,7 +28,7 @@ module.exports = {
                 });
             }
 
-            if (utils.canBuildStructure(STRUCTURE_EXTENSION, room)) {
+            if (utils.canBuildStructure(STRUCTURE_EXTENSION, room) && !utils.canBuildStructure(STRUCTURE_SPAWN, room)) {
                 let spawn = this.getSpawnWithMostFreeSpace(room);
 
                 if (spawn) {
@@ -137,7 +137,11 @@ module.exports = {
                             x2 = spawn.pos.x + i, y2 = spawn.pos.y + r;
 
                     for (let pair of [{x: x1, y: y1}, {x: x2, y: y2}]) {
-                        if (this.buildStructure(pair.x, pair.y, spawn.room, structureType)) {
+                        let pos = spawn.room.getPositionAt(pair.x, pair.y);
+                        if (_.isObject(pos) && pos.canBeBuiltOn() &&
+                                (pos.countStructuresInRange(STRUCTURE_ROAD, 1, true) > 0 ||
+                                pos.countStructuresInRange(STRUCTURE_EXTENSION, 1, true) > 0) &&
+                                pos.createConstructionSite(structureType) === OK) {
                             spawn.room.log(`Built ${structureType} near spawn ${spawn.name} at (${pair.x}, ${pair.y})`);
                             if (structureType === STRUCTURE_EXTENSION) {
                                 missingExtensionCount--;
@@ -214,25 +218,5 @@ module.exports = {
         }
 
         return buildableSquares;
-    },
-
-    /**
-     * Attempts to create a construction site at the given location.
-     *
-     * @param {int} x The x coordinate
-     * @param {int} y The y coordinate
-     * @param {Room} room The room to put the site in
-     * @param {String} structureType One of the STRUCTURE_* constants
-     * @returns {boolean} True, if the site was created successfully, false otherwise
-     */
-    buildStructure(x, y, room, structureType) {
-        if (x >= 0 && x < 50 && y >= 0 && y < 50) {
-            let pos = room.getPositionAt(x, y);
-            if (pos.canBeBuiltOn() && pos.createConstructionSite(structureType) === OK) {
-                return true;
-            }
-        }
-
-        return false;
     }
 };
