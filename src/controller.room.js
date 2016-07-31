@@ -11,26 +11,29 @@ module.exports = {
     run: function (room) {
         if (Game.time % 20 === 0 && _.keys(Game.constructionSites).length < MAX_CONSTRUCTION_SITES &&
                 room.find(FIND_CONSTRUCTION_SITES).length <= 20 &&
-                room.find(FIND_MY_CREEPS, {
-                    filter: c => c.memory.role === ROLE_BUILDER && c.memory.homeRoom === room.name
-                }).length > 0) {
+                utils.countCreeps(room, ROLE_BUILDER, c => c.memory.homeRoom === room.name) > 0) {
 
             if (utils.canBuildStructure(STRUCTURE_ROAD, room)) {
                 _.forEach(room.find(FIND_MY_SPAWNS), spawn => {
-
-                    this.buildRoadsAroundSpawn(spawn);
-
                     _.forEach(room.find(FIND_SOURCES), source => {
-                        this.buildRoad(spawn, source);
+                        if (room.find(FIND_CONSTRUCTION_SITES).length <= 20) {
+                            this.buildRoad(spawn, source);
+                        }
                     });
 
-                    this.buildRoad(spawn, room.controller);
+                    if (room.find(FIND_CONSTRUCTION_SITES).length <= 20) {
+                        this.buildRoad(spawn, room.controller);
+                    }
+
+                    if (room.find(FIND_CONSTRUCTION_SITES).length <= 20) {
+                        this.buildRoadsAroundSpawn(spawn);
+                    }
                 });
             }
 
-            if (utils.canBuildStructure(STRUCTURE_EXTENSION, room) && !utils.canBuildStructure(STRUCTURE_SPAWN, room)) {
+            if (room.find(FIND_CONSTRUCTION_SITES).length <= 20 &&
+                    utils.canBuildStructure(STRUCTURE_EXTENSION, room) && !utils.canBuildStructure(STRUCTURE_SPAWN, room)) {
                 let spawn = this.getSpawnWithMostFreeSpace(room);
-
                 if (spawn) {
                     this.buildExtensionsAndRoadsAroundSpawn(spawn);
                 }
