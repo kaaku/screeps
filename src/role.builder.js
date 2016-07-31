@@ -41,7 +41,7 @@ module.exports = {
         } else if (builder.memory.working) {
             let task = builder.memory.task;
             if (_.isUndefined(task) || !taskManager.isTaskValid(task)) {
-                task = taskManager.getNewTaskFor(builder);
+                task = taskManager.getNewTask(builder);
                 if (_.isObject(task)) {
                     builder.log(`Acquired a new task: ${JSON.stringify(task)}`);
                     builder.memory.task = task;

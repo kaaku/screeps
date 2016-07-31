@@ -1,4 +1,5 @@
 var _ = require('lodash');
+var utils = require('./utils');
 
 /**
  * Creates a new simple task object that contains data related to a task that needs to
@@ -23,26 +24,38 @@ function Task(type, roomName, targetId, priority) {
 module.exports = {
 
     /**
-     * Finds a new task for the given creep to work on.
+     * Finds a new task for the given assignee to work on.
      *
-     * @param creep The creep to find a new task for
-     * @returns {null|Task} A task for the creep to work on, or null if no tasks are
+     * @param {Creep|StructureTower} assignee The assignee who will work on the task
+     * @param {String|Array<String>} taskTypes One or more of the TASK_* constants.
+     * Only tasks with the given type(s) will be returned. By default returns all
+     * types of tasks.
+     * @param {boolean} includeLinkedRooms Whether to look for tasks from linked
+     * rooms or not. Rooms A and B are linked if they're adjacent and there's an exit
+     * between them
+     * @returns {null|Task} A task for the assignee to work on, or null if no tasks are
      * currently available
      */
-    getNewTaskFor: function (creep) {
-        var tasks = _.assign({}, this.getTasksForRoom(creep.room.name));
+    getNewTask: function (assignee, taskTypes = null, includeLinkedRooms = true) {
+        if (_.isString(taskTypes)) {
+            taskTypes = [taskTypes];
+        }
 
-        var exits = Game.map.describeExits(creep.room.name);
-        if (!_.isEmpty(exits)) {
-            let adjacentRoomNames = _.filter(exits,
-                    roomName => !_.has(Game.rooms, roomName) || (Game.rooms[roomName].isFriendlyOrNeutral()) &&
-                    _.isEmpty(_.filter(Game.creeps,
-                            creep => creep.memory.role === ROLE_BUILDER && creep.memory.homeRoom === roomName
-                    )));
-            if (!_.isEmpty(adjacentRoomNames)) {
-                _.forEach(adjacentRoomNames, roomName => {
-                    _.assign(tasks, this.getTasksForRoom(roomName));
+        // Create a new object in order to avoid modifying the object in memory
+        var tasks = _.assign({}, this.getTasksForRoom(assignee.room.name));
+
+        if (includeLinkedRooms) {
+            var exits = Game.map.describeExits(assignee.room.name);
+            if (!_.isEmpty(exits)) {
+                let adjacentRoomNames = _.filter(exits, roomName => {
+                    return !_.has(Game.rooms, roomName) || (Game.rooms[roomName].isFriendlyOrNeutral()) &&
+                            utils.countCreeps(null, ROLE_BUILDER, c => c.memory.homeRoom === roomName) === 0
                 });
+                if (!_.isEmpty(adjacentRoomNames)) {
+                    _.forEach(adjacentRoomNames, roomName => {
+                        _.assign(tasks, this.getTasksForRoom(roomName));
+                    });
+                }
             }
         }
 
@@ -51,10 +64,11 @@ module.exports = {
             let minPrio = 999, tasksWithMinPrio = [];
 
             _.forEach(tasks, task => {
-                if (this.isTaskValid(task) && (!_.isNumber(task.maxAssignees) ||
-                        task.maxAssignees > 0 && task.assignees.length < task.maxAssignees)) {
+                if (this.isTaskValid(task) && (!_.isArray(taskTypes) || _.contains(taskTypes, task.type)) &&
+                        (!_.isNumber(task.maxAssignees) || task.maxAssignees > 0 &&
+                        task.assignees.length < task.maxAssignees)) {
                     // Tasks in adjacent rooms are considered less important
-                    let effectivePrio = creep.room.name === task.roomName ?
+                    let effectivePrio = assignee.room.name === task.roomName ?
                             task.priority : task.priority * TASK_PRIO_ADJACENT_ROOM_MULTIPLIER;
                     if (effectivePrio < minPrio) {
                         minPrio = task.priority;
@@ -70,7 +84,7 @@ module.exports = {
 
             _.forEach(tasksWithMinPrio, task => {
                 let target = Game.getObjectById(task.targetId);
-                let range = creep.pos.getRangeTo(target) || 50;
+                let range = assignee.pos.getRangeTo(target) || 50;
                 if (_.isUndefined(closestTask) || range < rangeToClosestTask) {
                     closestTask = task;
                     rangeToClosestTask = range;
@@ -78,7 +92,7 @@ module.exports = {
             });
 
             if (closestTask) {
-                closestTask.assignees.push(creep.id);
+                closestTask.assignees.push(assignee.id);
                 return closestTask;
             }
         }
@@ -87,10 +101,10 @@ module.exports = {
     },
 
     /**
-     * This method should be invoked when a creep stops working on a task.
+     * This method should be invoked when an assignee stops working on a task.
      *
-     * @param {String} assigneeId The ID of the creep that was working on the task
-     * @param {Task} task The task the creep was working on
+     * @param {String} assigneeId The ID of the assignee that was working on the task
+     * @param {Task} task The task the assignee was working on
      */
     stopWorkOnTask: function (assigneeId, task) {
         if (_.isString(assigneeId) && _.isObject(task) && _.has(task, 'targetId') &&

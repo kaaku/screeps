@@ -85,3 +85,17 @@ global.TASKS_MAX_ASSIGNEES = {
     [TASK_REPAIR]: 1
 };
 
+/**
+ * Only structures whose percentual amount of hit points go below this value
+ * will be repaired.
+ *
+ * @type {number}
+ */
+global.TASKS_REPAIR_THRESHOLD = 0.7;
+
+/**
+ * A tower will only repair if its percentual energy level is above this value.
+ *
+ * @type {number}
+ */
+global.TOWER_REPAIR_ENERGY_THRESHOLD = 0.8;
