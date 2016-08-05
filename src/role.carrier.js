@@ -1,6 +1,5 @@
 var BaseRole = require('./role.base');
 var _ = require('lodash');
-var utils = require('./utils');
 
 function CarrierRole() {
     BaseRole.apply(this, arguments);
@@ -17,20 +16,21 @@ CarrierRole.prototype.run = function (carrier) {
 
     if (_.sum(carrier.carry) === carrier.carryCapacity || carrier.ticksToLive < 50) {
         carrier.memory.inDeliveryMode = true;
-        carrier.memory.pickupTargetId = null;
-        carrier.memory.energyPileId = null;
+        delete carrier.memory.energyPileId;
+        delete carrier.memory.pickupTargetId;
+        delete carrier.memory.minerId;
     } else if (_.sum(carrier.carry) === 0) {
         carrier.memory.inDeliveryMode = false;
-        carrier.memory.dropOffId = null;
+        delete carrier.memory.dropOffId;
     }
 
     if (carrier.memory.inDeliveryMode) {
         carrier.deliverEnergy();
     } else {
         // Picking up energy. Priorities:
-        // 1. If spawn/extensions are not full, fill them from containers and storage
-        // 2. Pickup stray piles of energy
-        // 3. Go hang with the miner and wait for it to provide energy
+        // 1. Pickup stray piles of energy
+        // 2. If spawn/extensions are not full, fill them from containers and storage
+        // 3. Go hang with a miner and wait for it to provide energy
         let pickupTarget = this.findPickupTarget(carrier);
         if (pickupTarget) {
             if (!carrier.pos.isNearTo(pickupTarget)) {
@@ -40,57 +40,68 @@ CarrierRole.prototype.run = function (carrier) {
             } else if (_.isFunction(pickupTarget.transfer)) {
                 pickupTarget.transfer(carrier, RESOURCE_ENERGY);
             }
-
-            return;
-        }
-
-        var miner = this.getMiner(carrier);
-        if (miner) {
-            if (!carrier.pos.isNearTo(miner)) {
-                // It's enough to get close to the miner. The miner will realize this
-                // and transfer its energy on its own. If the miner has dropped energy
-                // on the ground, that will get picked up by pickupEnergyInRange()
-                carrier.moveTo(miner);
-            } else {
-                // Pick up energy from the container under the miner
-                var container = _.head(_.filter(miner.pos.lookFor(LOOK_STRUCTURES),
-                        {'structureType': STRUCTURE_CONTAINER}));
-                if (container && container.store[RESOURCE_ENERGY] > 0) {
-                    container.transfer(carrier, RESOURCE_ENERGY);
-                }
-            }
         }
     }
 };
 
 CarrierRole.prototype.findPickupTarget = function (carrier) {
     var energyPile = Game.getObjectById(carrier.memory.energyPileId);
-    if (energyPile) {
+    if (energyPile && energyPile.amount / carrier.pos.getRangeTo(energyPile) > 15) {
         return energyPile;
-    }
-
-    var pickupTarget;
-    if (carrier.room.energyAvailable < carrier.room.energyCapacityAvailable) {
-        pickupTarget = Game.getObjectById(carrier.memory.pickupTargetId);
-        if (!pickupTarget || _.sum(pickupTarget.store) === 0) {
-            pickupTarget = _.first(_.sortBy(carrier.room.find(FIND_STRUCTURES, {
-                filter: s => {
-                    return (s.structureType === STRUCTURE_STORAGE || s.structureType === STRUCTURE_CONTAINER) &&
-                            _.sum(s.store) > 0;
-                }
-            }), s => 1 - _.sum(s.store) / s.storeCapacity));
-        }
-        carrier.memory.pickupTargetId = pickupTarget ? pickupTarget.id : null;
-    }
-
-    if (!pickupTarget) {
-        pickupTarget = carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
+    } else {
+        energyPile = carrier.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
             filter: pile => pile.amount / carrier.pos.getRangeTo(pile) > 15
         });
-        carrier.memory.energyPileId = pickupTarget ? pickupTarget.id : null;
+        if (energyPile) {
+            carrier.memory.energyPileId = energyPile.id;
+            return energyPile;
+        } else {
+            delete carrier.memory.energyPileId;
+        }
     }
 
-    return pickupTarget;
+    if (carrier.room.energyAvailable < carrier.room.energyCapacityAvailable) {
+        let pickupTarget = Game.getObjectById(carrier.memory.pickupTargetId);
+        if (pickupTarget && pickupTarget.hasEnergy()) {
+            return pickupTarget;
+        }
+
+        var energyStores = carrier.room.find(FIND_STRUCTURES, {
+            filter: s => _.contains([STRUCTURE_STORAGE, STRUCTURE_CONTAINER], s.structureType) && s.hasEnergy()
+        });
+
+        if (!_.isEmpty(energyStores) && !_.isEmpty(carrier.room.memory.dropOffContainerIds)) {
+            var dropOffContainers = _.filter(energyStores,
+                    container => _.contains(carrier.room.memory.dropOffContainerIds, container.id));
+            if (!_.isEmpty(dropOffContainers)) {
+                energyStores = dropOffContainers;
+            }
+        }
+
+        if (!_.isEmpty(energyStores)) {
+            pickupTarget = _.first(_.sortBy(energyStores, s => 1 - _.sum(s.store) / s.storeCapacity));
+            carrier.memory.pickupTargetId = pickupTarget.id;
+            return pickupTarget;
+        } else {
+            delete carrier.memory.pickupTargetId;
+        }
+    }
+
+    let miner = Game.getObjectById(carrier.memory.minerId);
+    if (miner && miner.carry[RESOURCE_ENERGY] > 0) {
+        return miner;
+    }
+
+    var miners = carrier.room.find(FIND_MY_CREEPS, {filter: c => c.memory.role === ROLE_MINER});
+    if (!_.isEmpty(miners)) {
+        miner = _.first(_.sortBy(miners, m => 1 - _.sum(m.carry) / m.carryCapacity));
+        carrier.memory.minerId = miner.id;
+        return miner;
+    } else {
+        delete carrier.memory.minerId;
+    }
+
+    return null;
 };
 
 CarrierRole.prototype.getBody = function (energy) {
@@ -114,46 +125,6 @@ CarrierRole.prototype.getBody = function (energy) {
     }
 
     return carry.concat(move);
-};
-
-CarrierRole.prototype.getMiner = function (carrier) {
-
-    var miner = Game.getObjectById(carrier.memory.minerId);
-
-    if (!carrier.memory.hasOwnMiner || !miner) {
-        // Either working temporarily with a surrogate miner, or the miner
-        // we just worked with died. Find a new one.
-
-        var soloMiner = utils.findClosestSoloMiner(carrier.pos);
-        if (soloMiner) {
-            carrier.memory.minerId = soloMiner.id;
-            carrier.memory.sourceId = soloMiner.memory.sourceId;
-            carrier.memory.hasOwnMiner = true;
-            return soloMiner;
-        }
-
-        // Find a surrogate miner and temporarily link to that,
-        // until a new miner is built for the current source
-        var miners = carrier.room.find(FIND_MY_CREEPS, {
-            filter: creep => creep.memory.role === ROLE_MINER
-        });
-        // Work with the farthest off miner, as it probably needs the most help
-        var farthestMiner = _.last(_.sortBy(miners, function (miner) {
-            return carrier.pos.getRangeTo(miner);
-        }));
-        if (farthestMiner) {
-            carrier.memory.minerId = farthestMiner.id;
-            carrier.memory.sourceId = farthestMiner.memory.sourceId;
-            carrier.memory.hasOwnMiner = false;
-            return farthestMiner;
-        }
-
-        // No miners in the room, just chill
-        return null;
-    } else {
-        // The carrier is linked to an existing miner
-        return miner;
-    }
 };
 
 module.exports = new CarrierRole();

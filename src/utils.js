@@ -110,19 +110,6 @@ module.exports = {
     },
 
     /**
-     * Finds the miner closest to the given position that doesn't have a carrier
-     * linked to it. If there are no miners in the room, or all have a carrier linked
-     * to them, returns null.
-     *
-     * @param {RoomPosition} pos
-     */
-    findClosestSoloMiner: function (pos) {
-        return pos.findClosestByRange(FIND_MY_CREEPS, {
-            filter: creep => creep.memory.role === ROLE_MINER && !Game.getObjectById(creep.memory.carrierId)
-        });
-    },
-
-    /**
      * Finds all hostile structures in the given room that can be destroyed (i.e. everything
      * except for the controller)
      *

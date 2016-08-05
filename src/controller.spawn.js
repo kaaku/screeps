@@ -46,10 +46,7 @@ module.exports = {
                     (room.find(FIND_HOSTILE_CREEPS).length > 0 || room.memory.occupationInProgress)) {
                 this.createFightingCreep(spawn);
             } else if (carrierCount < minerCount) {
-                var soloMiner = utils.findClosestSoloMiner(spawn.pos);
-                if (soloMiner) {
-                    this.createCreep(spawn, ROLE_CARRIER, {minerId: soloMiner.id, sourceId: soloMiner.memory.sourceId});
-                }
+                this.createCreep(spawn, ROLE_CARRIER);
             } else if (freeSource) {
                 this.createCreep(spawn, ROLE_MINER, {sourceId: freeSource.id});
             } else if (_.isString(claimTarget)) {

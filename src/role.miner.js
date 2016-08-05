@@ -10,15 +10,13 @@ Object.setPrototypeOf(MinerRole.prototype, BaseRole.prototype);
 
 MinerRole.prototype.run = function (miner) {
 
-    var carrier = this.getCarrier(miner);
-
     if (miner.carry.energy >= 50) {
         miner.transferResourcesToAdjacentCreep(RESOURCE_ENERGY,
                 (miner.room.hasSurplusEnergy() ? [ROLE_CARRIER, ROLE_BUILDER] : ROLE_CARRIER));
     }
 
     if (_.sum(miner.carry) === miner.carryCapacity) {
-        if (!carrier) {
+        if (utils.countCreeps(miner.room, ROLE_CARRIER) === 0) {
             // No carrier available; the miner needs to deliver the energy on its own
             miner.memory.inDeliveryMode = true;
         } else {
@@ -33,7 +31,7 @@ MinerRole.prototype.run = function (miner) {
     if (miner.memory.inDeliveryMode) {
         miner.deliverEnergy();
     } else {
-        this.harvestResources(miner, carrier !== null);
+        this.harvestResources(miner);
     }
 };
 
@@ -65,7 +63,7 @@ MinerRole.prototype.getBody = function (energy) {
     return work.concat(carry).concat(move);
 };
 
-MinerRole.prototype.harvestResources = function (miner, hasCarrier) {
+MinerRole.prototype.harvestResources = function (miner) {
     var source = Game.getObjectById(miner.memory.sourceId);
     var container = this.getContainer(miner);
 
@@ -74,7 +72,7 @@ MinerRole.prototype.harvestResources = function (miner, hasCarrier) {
     } else if (!miner.pos.isNearTo(source)) {
         miner.moveTo(source);
     } else {
-        if (!hasCarrier && container && container.store.energy > 0) {
+        if (utils.countCreeps(miner.room, ROLE_CARRIER) === 0 && container && container.store.energy > 0) {
             // No carrier available -> take the resources from the container and deliver them
             container.transfer(miner, RESOURCE_ENERGY);
         } else {
@@ -120,28 +118,6 @@ MinerRole.prototype.getContainer = function (miner) {
     }
 
     return container;
-};
-
-/**
- * Returns the carrier that is assigned as the pair of this miner, or null if no such
- * carrier exists. If there are multiple such carriers, returns the closest one.
- *
- * @param {Creep} miner
- */
-MinerRole.prototype.getCarrier = function (miner) {
-    var carrier = Game.getObjectById(miner.memory.carrierId);
-
-    if (!carrier || carrier.memory.minerId !== miner.id) {
-        // Carriers can switch the miner they work with in certain cases, so it's
-        // important to check that the carrier is still linked to this miner
-        carrier = miner.pos.findClosestByRange(FIND_MY_CREEPS, {
-            filter: creep => creep.memory.role === ROLE_CARRIER && creep.memory.sourceId === miner.memory.sourceId
-        });
-    }
-
-    miner.memory.carrierId = carrier ? carrier.id : null;
-
-    return carrier;
 };
 
 module.exports = new MinerRole();
