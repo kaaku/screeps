@@ -102,15 +102,13 @@ CarrierRole.prototype.getBody = function (energy) {
     var cheapestPart = _.min([BODYPART_COST[CARRY], BODYPART_COST[MOVE]]);
 
     while (energy >= cheapestPart && move.length + carry.length < MAX_CREEP_SIZE) {
-        if (energy >= BODYPART_COST[MOVE] &&
-                (!move.length || move.length * 2 < carry.length || energy < BODYPART_COST[CARRY])) {
+        if (energy >= BODYPART_COST[MOVE] && move.length <= carry.length) {
             move.push(MOVE);
             energy -= BODYPART_COST[MOVE];
         } else if (energy >= BODYPART_COST[CARRY]) {
             carry.push(CARRY);
             energy -= BODYPART_COST[CARRY];
         } else {
-            // Should never end up here, but just to make sure we avoid an infinite loop
             break;
         }
     }
