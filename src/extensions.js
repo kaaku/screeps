@@ -232,10 +232,12 @@ Creep.prototype.transferResourcesToAdjacentCreep = function (resourceType = RESO
 };
 
 /**
- * @returns {boolean} True, if this is an energy pile, false otherwise
+ * @param {int} amount The amount of energy the pile should have
+ * @returns {boolean} True, if this pile has at least the given amount
+ * of energy, false otherwise
  */
-Resource.prototype.hasEnergy = function () {
-    return this.resourceType === RESOURCE_ENERGY && this.amount > 0;
+Resource.prototype.hasEnergy = function (amount = 1) {
+    return this.resourceType === RESOURCE_ENERGY && this.amount >= amount;
 };
 
 /**
@@ -467,10 +469,12 @@ Structure.prototype.getTargetHits = function () {
 };
 
 /**
- * @return {boolean} True, if this structure has energy, false otherwise
+ * @param {int} amount The amount of energy the structure should have
+ * @return {boolean} True, if this structure has at least the given amount
+ * of energy, false otherwise
  */
-Structure.prototype.hasEnergy = function () {
-    return this.hasResources(RESOURCE_ENERGY);
+Structure.prototype.hasEnergy = function (amount = 1) {
+    return this.hasResources(RESOURCE_ENERGY, amount);
 };
 
 /**
@@ -483,12 +487,13 @@ Structure.prototype.hasEnergyStore = function () {
 
 /**
  * @param {String} resourceType One of the RESOURCE_* constants
- * @returns {boolean} True, if this structure has resources of the given type,
- * false otherwise
+ * @param {int} amount The amount of energy the structure should have
+ * @returns {boolean} True, if this structure has at least the given amount
+ * of resources of the given type, false otherwise
  */
-Structure.prototype.hasResources = function (resourceType = RESOURCE_ENERGY) {
-    return (_.isObject(this.store) && this.store[resourceType] > 0) ||
-            (resourceType === RESOURCE_ENERGY && _.isNumber(this.energy) && this.energy > 0);
+Structure.prototype.hasResources = function (resourceType = RESOURCE_ENERGY, amount = 1) {
+    return (_.isObject(this.store) && this.store[resourceType] >= amount) ||
+            (resourceType === RESOURCE_ENERGY && _.isNumber(this.energy) && this.energy >= amount);
 };
 
 /**

@@ -99,7 +99,7 @@ BuilderRole.prototype.performTask = function (builder, task) {
 
 BuilderRole.prototype.findClosestEnergyPickup = function (builder) {
     var pickup = Game.getObjectById(builder.memory.pickupId);
-    if (pickup && pickup.hasEnergy()) {
+    if (pickup && pickup.hasEnergy(5)) {
         return pickup;
     }
 
