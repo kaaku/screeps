@@ -45,7 +45,7 @@ MinerRole.prototype.getBody = function (energy) {
     var work = [], carry = [], move = [];
     var cheapestPart = _.min([BODYPART_COST[CARRY], BODYPART_COST[MOVE], BODYPART_COST[WORK]]);
 
-    while (energy >= cheapestPart) {
+    while (energy >= cheapestPart && move.length + carry.length + work.length < MAX_CREEP_SIZE) {
         if (!move.length) {
             move.push(MOVE);
             energy -= BODYPART_COST[MOVE];

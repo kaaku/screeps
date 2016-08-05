@@ -144,7 +144,7 @@ BuilderRole.prototype.getBody = function (energy) {
 
     var move = [], carry = [], work = [];
     var cheapestPart = _.min([BODYPART_COST[MOVE], BODYPART_COST[CARRY], BODYPART_COST[WORK]]);
-    while (energy >= cheapestPart) {
+    while (energy >= cheapestPart && move.length + carry.length + work.length < MAX_CREEP_SIZE) {
         if (energy >= BODYPART_COST[WORK] && work.length <= carry.length) {
             work.push(WORK);
             energy -= BODYPART_COST[WORK];

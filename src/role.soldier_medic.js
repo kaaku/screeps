@@ -60,7 +60,7 @@ MedicRole.prototype.getBody = function (energy) {
     var heal = [], move = [], tough = [];
     var cheapestPart = _.min([BODYPART_COST[HEAL], BODYPART_COST[MOVE], BODYPART_COST[TOUGH]]);
 
-    while (energy >= cheapestPart) {
+    while (energy >= cheapestPart && move.length + heal.length + tough.length < MAX_CREEP_SIZE) {
         if (energy >= BODYPART_COST[MOVE] && move.length < heal.length + tough.length) {
             move.push(MOVE);
             energy -= BODYPART_COST[MOVE];

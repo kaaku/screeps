@@ -104,7 +104,7 @@ SoldierMeleeRole.prototype.getBody = function (energy) {
     var attack = [], move = [], tough = [];
     var cheapestPart = _.min([BODYPART_COST[ATTACK], BODYPART_COST[MOVE], BODYPART_COST[TOUGH]]);
 
-    while (energy >= cheapestPart) {
+    while (energy >= cheapestPart && move.length + attack.length + tough.length < MAX_CREEP_SIZE) {
         if (energy >= BODYPART_COST[MOVE] && move.length < attack.length + tough.length) {
             move.push(MOVE);
             energy -= BODYPART_COST[MOVE];

@@ -101,7 +101,7 @@ CarrierRole.prototype.getBody = function (energy) {
     var carry = [], move = [];
     var cheapestPart = _.min([BODYPART_COST[CARRY], BODYPART_COST[MOVE]]);
 
-    while (energy >= cheapestPart) {
+    while (energy >= cheapestPart && move.length + carry.length < MAX_CREEP_SIZE) {
         if (energy >= BODYPART_COST[MOVE] &&
                 (!move.length || move.length * 2 < carry.length || energy < BODYPART_COST[CARRY])) {
             move.push(MOVE);
