@@ -32,7 +32,9 @@ module.exports = {
             }
 
             if (room.find(FIND_CONSTRUCTION_SITES).length <= 20 &&
-                    utils.canBuildStructure(STRUCTURE_EXTENSION, room) && !utils.canBuildStructure(STRUCTURE_SPAWN, room)) {
+                    utils.canBuildStructure(STRUCTURE_EXTENSION, room) &&
+                    utils.countStructures(room, STRUCTURE_SPAWN) ===
+                    CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][room.controller.level]) {
                 let spawn = this.getSpawnWithMostFreeSpace(room);
                 if (spawn) {
                     this.buildExtensionsAndRoadsAroundSpawn(spawn);
