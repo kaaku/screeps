@@ -115,7 +115,7 @@ BuilderRole.prototype.findClosestEnergyPickup = function (builder) {
 
         var structures = builder.room.find(FIND_STRUCTURES, {
             filter: structure => {
-                return structure.isFriendlyOrNeutral() && structure.hasEnergy() &&
+                return structure.isFriendlyOrNeutral() && structure.hasEnergy(5) &&
                         structure.structureType !== STRUCTURE_TOWER;
             }
         });
